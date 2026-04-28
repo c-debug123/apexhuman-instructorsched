@@ -1,6 +1,5 @@
 import { COURSES, COURSE_LIST, DAY_FRAMEWORK, getInstructorType } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
-import RoleSwitcher from '../../components/RoleSwitcher'
 
 const INSTRUCTOR_TYPES = [
   {
@@ -59,7 +58,7 @@ export default function ReferencePage() {
             <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)' }}>
               Curriculum Reference
             </span>
-            <RoleSwitcher role="admin" />
+            
           </div>
           <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
             Quick reference for the Apex Humans curriculum — 6 courses, 4 instructor types, 5-day structure.

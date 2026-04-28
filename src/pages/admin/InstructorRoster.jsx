@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
-import RoleSwitcher from '../../components/RoleSwitcher'
 
 // ── Add / Edit instructor form ────────────────────────────────────────────────
 function InstructorForm({ initial, modules, onSave, onCancel }) {
@@ -126,7 +125,7 @@ export default function InstructorRoster() {
               <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>
                 Instructor Roster
               </h1>
-              <RoleSwitcher role="admin" />
+              
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
               {instructorList.length === 0

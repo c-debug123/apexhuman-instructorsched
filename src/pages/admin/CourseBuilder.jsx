@@ -10,7 +10,6 @@ import { CSS } from '@dnd-kit/utilities'
 import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
-import RoleSwitcher from '../../components/RoleSwitcher'
 
 const COLORS = ['#7c6af7','#ec4899','#f59e0b','#22c55e','#2dd4bf','#3b82f6','#f97316','#a78bfa','#e11d48','#0ea5e9']
 
@@ -279,7 +278,7 @@ export default function CourseBuilder() {
                   </button>
                   <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Courses</h1>
                 </div>
-                <RoleSwitcher role="admin" />
+                
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
                 {(courses || []).length === 0 ? 'No courses yet.' : `${(courses || []).length} course${(courses || []).length !== 1 ? 's' : ''} defined`}

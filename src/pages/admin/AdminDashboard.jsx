@@ -2,11 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useStats } from '../../hooks/useSlots'
-import { COURSES, addDays, formatDateShort } from '../../data/courses'
+import { addDays, formatDateShort } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import CourseBadge from '../../components/CourseBadge'
-import RoleSwitcher from '../../components/RoleSwitcher'
 
 function PlusIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -14,19 +13,36 @@ function PlusIcon() {
 function ResetIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
 }
+function ShareIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+}
+
+const INSTRUCTOR_URL = window.location.hostname.includes('localhost')
+  ? `${window.location.origin}/?role=instructor`
+  : 'https://apexhuman-instructor.vercel.app'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const { cohorts, claims, resetAll } = useApp()
+  const { cohorts, courses, claims, resetAll } = useApp()
   const stats = useStats()
   const [showReset, setShowReset] = useState(false)
+  const [copied, setCopied]       = useState(false)
+
+  function copyInstructorLink() {
+    navigator.clipboard.writeText(INSTRUCTOR_URL).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const urgentCohorts = cohorts.filter(c => {
+    const course = courses.find(x => x.id === c.courseId)
+    const dayCount = course?.days?.length || 5
     const d1 = new Date(c.startDate + 'T00:00:00')
     const now = new Date(); now.setHours(0,0,0,0)
     const diff = Math.ceil((d1 - now) / 86400000)
     if (diff > 7 || diff < 0) return false
-    for (let day = 1; day <= 5; day++) {
+    for (let day = 1; day <= dayCount; day++) {
       for (let sec = 1; sec <= c.sections; sec++) {
         const has = claims.some(cl => cl.cohortId === c.id && cl.day === day && cl.section === sec)
         if (!has) return true
@@ -36,8 +52,10 @@ export default function AdminDashboard() {
   })
 
   const totalUrgentOpen = urgentCohorts.reduce((sum, c) => {
+    const course = courses.find(x => x.id === c.courseId)
+    const dayCount = course?.days?.length || 5
     let open = 0
-    for (let day = 1; day <= 5; day++)
+    for (let day = 1; day <= dayCount; day++)
       for (let sec = 1; sec <= c.sections; sec++)
         if (!claims.some(cl => cl.cohortId === c.id && cl.day === day && cl.section === sec)) open++
     return sum + open
@@ -53,13 +71,27 @@ export default function AdminDashboard() {
               Apex Humans
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button
+                onClick={copyInstructorLink}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(45,212,191,0.12)',
+                  border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(45,212,191,0.3)'}`,
+                  borderRadius: 'var(--radius-full)', padding: '4px 10px',
+                  color: copied ? 'var(--green)' : 'var(--teal)',
+                  fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
+                  cursor: 'pointer', transition: 'all 150ms',
+                }}
+              >
+                <ShareIcon /> {copied ? 'Copied!' : 'Instructor Link'}
+              </button>
               {(cohorts.length > 0 || claims.length > 0) && (
                 <button
                   onClick={() => setShowReset(true)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 5,
                     background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)',
-                    borderRadius: 'var(--radius-full)', padding: '3px 10px',
+                    borderRadius: 'var(--radius-full)', padding: '4px 10px',
                     color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600,
                     fontSize: 11, cursor: 'pointer',
                   }}
@@ -67,17 +99,16 @@ export default function AdminDashboard() {
                   <ResetIcon /> Reset
                 </button>
               )}
-              <RoleSwitcher role="admin" />
             </div>
           </div>
 
           {/* Stats */}
           <div className="card" style={{ display: 'flex', marginBottom: 20, overflow: 'hidden' }}>
             {[
-              { label: 'Total Slots', value: stats.totalSlots, color: 'var(--accent)' },
-              { label: 'Filled',      value: stats.filled,     color: 'var(--teal)' },
-              { label: 'Open',        value: stats.open,       color: 'var(--amber)' },
-              { label: 'Courses',     value: stats.coursesRunning, color: 'var(--text-2)' },
+              { label: 'Total Slots', value: stats.totalSlots,     color: 'var(--accent)' },
+              { label: 'Filled',      value: stats.filled,          color: 'var(--teal)' },
+              { label: 'Open',        value: stats.open,            color: 'var(--amber)' },
+              { label: 'Courses',     value: stats.coursesRunning,  color: 'var(--text-2)' },
             ].map((s, i, arr) => (
               <div key={s.label} style={{
                 flex: 1, padding: '14px 8px', textAlign: 'center',
@@ -103,21 +134,13 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Quick links to new config pages */}
+          {/* Quick links */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => navigate('/admin/modules')}
-              style={{ flex: 1, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-            >
+            <button className="btn btn-ghost" onClick={() => navigate('/admin/modules')} style={{ flex: 1, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="6" height="6" rx="1"/><rect x="9" y="3" width="13" height="6" rx="1"/><rect x="2" y="13" width="6" height="6" rx="1"/><rect x="9" y="13" width="13" height="6" rx="1"/></svg>
               Module Library
             </button>
-            <button
-              className="btn btn-ghost"
-              onClick={() => navigate('/admin/courses')}
-              style={{ flex: 1, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-            >
+            <button className="btn btn-ghost" onClick={() => navigate('/admin/courses')} style={{ flex: 1, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
               Courses
             </button>
@@ -143,7 +166,7 @@ export default function AdminDashboard() {
               </button>
             </div>
           ) : (
-            cohorts.map(cohort => <CohortCard key={cohort.id} cohort={cohort} claims={claims} onClick={() => navigate(`/admin/cohorts/${cohort.id}`)} />)
+            cohorts.map(cohort => <CohortCard key={cohort.id} cohort={cohort} courses={courses} claims={claims} onClick={() => navigate(`/admin/cohorts/${cohort.id}`)} />)
           )}
         </div>
       </div>
@@ -172,16 +195,8 @@ export default function AdminDashboard() {
             The app will return to a blank state. This cannot be undone.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button
-              className="btn btn-danger"
-              style={{ flex: 1 }}
-              onClick={() => { resetAll(); setShowReset(false) }}
-            >
-              Reset everything
-            </button>
-            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowReset(false)}>
-              Cancel
-            </button>
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => { resetAll(); setShowReset(false) }}>Reset everything</button>
+            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowReset(false)}>Cancel</button>
           </div>
         </div>
       </BottomSheet>
@@ -191,13 +206,14 @@ export default function AdminDashboard() {
   )
 }
 
-function CohortCard({ cohort, claims, onClick }) {
-  const course = COURSES[cohort.courseId]
+function CohortCard({ cohort, courses, claims, onClick }) {
+  const course = courses.find(c => c.id === cohort.courseId)
   if (!course) return null
-  const d5 = addDays(cohort.startDate, 4)
-  const total = cohort.sections * 5
-  const filled = claims.filter(cl => cl.cohortId === cohort.id).length
-  const pct = total > 0 ? (filled / total) * 100 : 0
+  const dayCount = course.days?.length || 5
+  const endDate  = addDays(cohort.startDate, dayCount - 1)
+  const total    = cohort.sections * dayCount
+  const filled   = claims.filter(cl => cl.cohortId === cohort.id).length
+  const pct      = total > 0 ? (filled / total) * 100 : 0
   const barColor = pct === 100 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
 
   return (
@@ -206,7 +222,7 @@ function CohortCard({ cohort, claims, onClick }) {
       onClick={onClick}
       style={{ padding: 0, overflow: 'hidden', textAlign: 'left', width: '100%', cursor: 'pointer', background: 'var(--surface-sm)' }}
     >
-      <div style={{ display: 'flex', gap: 0 }}>
+      <div style={{ display: 'flex' }}>
         <div style={{ width: 4, background: course.color, flexShrink: 0 }} />
         <div style={{ flex: 1, padding: '14px 14px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -216,15 +232,14 @@ function CohortCard({ cohort, claims, onClick }) {
             </span>
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
-            {formatDateShort(cohort.startDate)} – {formatDateShort(d5)}
+            {formatDateShort(cohort.startDate)} – {formatDateShort(endDate)}
           </div>
 
           {/* Mini dot grid */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
             {Array.from({ length: cohort.sections }, (_, si) =>
-              Array.from({ length: 5 }, (_, di) => {
-                const day = di + 1; const sec = si + 1
-                const taken = claims.some(cl => cl.cohortId === cohort.id && cl.day === day && cl.section === sec)
+              Array.from({ length: dayCount }, (_, di) => {
+                const taken = claims.some(cl => cl.cohortId === cohort.id && cl.day === di + 1 && cl.section === si + 1)
                 return (
                   <div key={`${si}-${di}`} style={{
                     width: 8, height: 8, borderRadius: '50%',

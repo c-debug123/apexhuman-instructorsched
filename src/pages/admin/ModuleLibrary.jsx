@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
-import RoleSwitcher from '../../components/RoleSwitcher'
 
 const TAG_OPTIONS = ['AI', 'Business', 'Creative', 'Technical', 'Marketing', 'Design', 'Operations']
 
@@ -127,7 +126,7 @@ export default function ModuleLibrary() {
                 </button>
                 <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Module Library</h1>
               </div>
-              <RoleSwitcher role="admin" />
+              
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
               {(modules || []).length === 0

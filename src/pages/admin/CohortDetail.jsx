@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useSlotsForCohort } from '../../hooks/useSlots'
-import { COURSES, formatDateShort } from '../../data/courses'
+import { addDays, formatDateShort } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import CourseBadge from '../../components/CourseBadge'
@@ -12,13 +12,13 @@ function BackIcon() {
 }
 
 export default function CohortDetail() {
-  const { id } = useParams()
+  const { id }   = useParams()
   const navigate = useNavigate()
-  const { cohorts, claims, removeClaim, deleteCohort } = useApp()
+  const { cohorts, courses, claims, removeClaim, deleteCohort } = useApp()
   const cohort = cohorts.find(c => c.id === id)
-  const slots = useSlotsForCohort(id)
+  const slots  = useSlotsForCohort(id)
   const [pendingUnclaim, setPendingUnclaim] = useState(null)
-  const [showDelete, setShowDelete] = useState(false)
+  const [showDelete, setShowDelete]         = useState(false)
 
   if (!cohort) {
     return (
@@ -32,56 +32,34 @@ export default function CohortDetail() {
     )
   }
 
-  const course = COURSES[cohort.courseId]
-  const total = cohort.sections * 5
-  const filled = claims.filter(cl => cl.cohortId === id).length
-  const d5 = formatDateShort(new Date(cohort.startDate).toISOString().slice(0, 10).replace(/\d+$/, v => String(parseInt(v) + 4)))
+  const course   = courses.find(c => c.id === cohort.courseId)
+  const dayCount = course?.days?.length || 5
+  const endDate  = addDays(cohort.startDate, dayCount - 1)
+  const total    = cohort.sections * dayCount
+  const filled   = claims.filter(cl => cl.cohortId === id).length
 
   const instructorNames = [...new Set(claims.filter(cl => cl.cohortId === id).map(cl => cl.instructorName))]
 
-  function getSlot(day, section) {
-    return slots.find(s => s.day === day && s.section === section)
-  }
-
-  function handleCellTap(slot) {
-    if (slot?.claim) setPendingUnclaim(slot)
-  }
-
-  function confirmUnclaim() {
-    if (pendingUnclaim?.claim) {
-      removeClaim(pendingUnclaim.claim.id)
-    }
-    setPendingUnclaim(null)
-  }
-
-  function confirmDelete() {
-    deleteCohort(id)
-    navigate('/admin')
-  }
-
-  const shortType = t => ({ 'AI Educator': 'AI Edu', 'Business Strategist': 'Biz', 'Growth Marketer': 'Growth', 'Roblox Expert': 'Roblox' }[t] || t)
+  function getSlot(day, section) { return slots.find(s => s.day === day && s.section === section) }
+  function handleCellTap(slot)   { if (slot?.claim) setPendingUnclaim(slot) }
+  function confirmUnclaim()      { if (pendingUnclaim?.claim) removeClaim(pendingUnclaim.claim.id); setPendingUnclaim(null) }
+  function confirmDelete()       { deleteCohort(id); navigate('/admin') }
 
   return (
     <div className="admin-bg">
       <div className="z1 page">
         <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8, paddingBottom: 6 }}>
             <button className="btn btn-ghost" style={{ padding: '8px 4px', minHeight: 40 }} onClick={() => navigate('/admin')}>
               <BackIcon />
             </button>
-            <div style={{ flex: 1 }}>
-              <CourseBadge courseId={cohort.courseId} size="sm" />
-            </div>
-            <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--red)', padding: '8px 4px' }} onClick={() => setShowDelete(true)}>
-              Delete
-            </button>
+            <div style={{ flex: 1 }}><CourseBadge courseId={cohort.courseId} size="sm" /></div>
+            <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--red)', padding: '8px 4px' }} onClick={() => setShowDelete(true)}>Delete</button>
           </div>
 
-          {/* Summary */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '0 4px' }}>
             <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
-              {formatDateShort(cohort.startDate)} – {formatDateShort(new Date(new Date(cohort.startDate + 'T00:00:00').setDate(new Date(cohort.startDate + 'T00:00:00').getDate() + 4)).toISOString().slice(0,10))}
+              {formatDateShort(cohort.startDate)} – {formatDateShort(endDate)}
             </span>
             <span className="chip chip-muted">{cohort.sections} section{cohort.sections !== 1 ? 's' : ''}</span>
             <span className="chip" style={{ background: filled === total ? 'var(--green-dim)' : 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.3)', color: filled === total ? 'var(--green)' : 'var(--amber)' }}>
@@ -90,21 +68,23 @@ export default function CohortDetail() {
           </div>
         </div>
 
-        {/* Slot grid */}
+        {/* Slot grid — dynamic column count */}
         <div style={{ padding: '0 16px', marginBottom: 24 }}>
           <div className="section-label" style={{ marginBottom: 10 }}>Slot Grid</div>
           <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 320 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 280 }}>
               <thead>
                 <tr style={{ background: 'var(--surface-xs)' }}>
-                  <th style={{ padding: '8px 10px', fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)', textAlign: 'left', borderBottom: '1px solid var(--border-dim)' }}>
-                    Sec
-                  </th>
-                  {[1,2,3,4,5].map(d => (
-                    <th key={d} style={{ padding: '8px 8px', fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)', textAlign: 'center', borderBottom: '1px solid var(--border-dim)', whiteSpace: 'nowrap' }}>
-                      D{d}
-                    </th>
-                  ))}
+                  <th style={thStyle('left')}>Sec</th>
+                  {Array.from({ length: dayCount }, (_, i) => {
+                    const dayDef = course?.days?.[i]
+                    const label  = dayDef?.label || (dayDef?.moduleId ? `D${i+1}` : `D${i+1}`)
+                    return (
+                      <th key={i} style={thStyle('center')} title={dayDef?.label || ''}>
+                        {label.length > 4 ? `D${i+1}` : label}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -113,31 +93,18 @@ export default function CohortDetail() {
                     <td style={{ padding: '10px 10px', fontSize: 12, color: 'var(--text-3)', borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
                       {si + 1}
                     </td>
-                    {[1,2,3,4,5].map(d => {
-                      const slot = getSlot(d, si + 1)
-                      const hasClaim = slot?.claim
+                    {Array.from({ length: dayCount }, (_, di) => {
+                      const slot     = getSlot(di + 1, si + 1)
+                      const hasClaim = !!slot?.claim
+                      const label    = slot?.moduleName || slot?.instructorType || ''
                       return (
-                        <td
-                          key={d}
-                          onClick={() => handleCellTap(slot)}
-                          style={{
-                            padding: '8px 6px', textAlign: 'center',
-                            background: hasClaim ? 'var(--teal-dim)' : 'transparent',
-                            cursor: hasClaim ? 'pointer' : 'default',
-                            borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none',
-                            transition: 'background 0.15s',
-                          }}
-                        >
-                          <div style={{ fontSize: 9, color: 'var(--text-4)', fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3 }}>
-                            {slot ? shortType(slot.instructorType) : ''}
+                        <td key={di} onClick={() => handleCellTap(slot)} style={{ padding: '8px 6px', textAlign: 'center', background: hasClaim ? 'var(--teal-dim)' : 'transparent', cursor: hasClaim ? 'pointer' : 'default', borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none', transition: 'background 0.15s' }}>
+                          <div style={{ fontSize: 9, color: 'var(--text-4)', fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 48 }}>
+                            {label.split(' ')[0]}
                           </div>
-                          {hasClaim ? (
-                            <div style={{ fontSize: 10, color: 'var(--teal)', fontWeight: 500, lineHeight: 1.2 }}>
-                              {slot.claim.instructorName.split(' ')[0]}
-                            </div>
-                          ) : (
-                            <div style={{ fontSize: 10, color: 'var(--text-4)' }}>Open</div>
-                          )}
+                          {hasClaim
+                            ? <div style={{ fontSize: 10, color: 'var(--teal)', fontWeight: 500, lineHeight: 1.2 }}>{slot.claim.instructorName.split(' ')[0]}</div>
+                            : <div style={{ fontSize: 10, color: 'var(--text-4)' }}>Open</div>}
                         </td>
                       )
                     })}
@@ -155,7 +122,7 @@ export default function CohortDetail() {
 
         {/* Instructor list */}
         {instructorNames.length > 0 && (
-          <div style={{ padding: '0 16px' }}>
+          <div style={{ padding: '0 16px', paddingBottom: 100 }}>
             <div className="section-label" style={{ marginBottom: 10 }}>Instructors in this cohort</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {instructorNames.map(name => {
@@ -167,9 +134,7 @@ export default function CohortDetail() {
                     </div>
                     <div>
                       <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {nameClaims.map(cl => `D${cl.day} S${cl.section}`).join(' · ')}
-                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{nameClaims.map(cl => `D${cl.day} S${cl.section}`).join(' · ')}</div>
                     </div>
                   </div>
                 )
@@ -179,16 +144,13 @@ export default function CohortDetail() {
         )}
       </div>
 
-      {/* Unclaim sheet */}
       <BottomSheet isOpen={!!pendingUnclaim} onClose={() => setPendingUnclaim(null)} title="Remove instructor?">
         {pendingUnclaim && (
           <div>
             <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 4 }}>
               {pendingUnclaim.claim?.instructorName} — {course?.name} D{pendingUnclaim.day}, Sec {pendingUnclaim.section}
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
-              Remove this instructor from the slot?
-            </div>
+            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>Remove this instructor from the slot?</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>Remove Claim</button>
               <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Cancel</button>
@@ -197,7 +159,6 @@ export default function CohortDetail() {
         )}
       </BottomSheet>
 
-      {/* Delete cohort sheet */}
       <BottomSheet isOpen={showDelete} onClose={() => setShowDelete(false)} title="Delete cohort?">
         <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
           This will remove the cohort and all {filled} claim{filled !== 1 ? 's' : ''} associated with it. This cannot be undone.
@@ -212,3 +173,9 @@ export default function CohortDetail() {
     </div>
   )
 }
+
+const thStyle = (align) => ({
+  padding: '8px 8px', fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600,
+  textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)',
+  textAlign: align, borderBottom: '1px solid var(--border-dim)', whiteSpace: 'nowrap',
+})

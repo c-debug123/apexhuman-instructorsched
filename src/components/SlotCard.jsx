@@ -2,7 +2,16 @@ import { useState } from 'react'
 import CourseBadge from './CourseBadge'
 import { formatDate } from '../data/courses'
 
-export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compact = false }) {
+function LockIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </svg>
+  )
+}
+
+export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compact = false, eligible = true }) {
   const [justClaimed, setJustClaimed] = useState(false)
   const isMine = slot.claim && slot.claim.instructorName === currentName
   const isTaken = slot.claim && !isMine
@@ -14,8 +23,23 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
     setTimeout(() => setJustClaimed(false), 600)
   }
 
-  const borderColor = isMine ? 'var(--teal-border)' : isTaken ? 'var(--border-md)' : 'var(--border)'
-  const bg = isMine ? 'var(--teal-dim)' : isTaken ? 'var(--surface-xs)' : 'var(--surface-sm)'
+  const isLocked = isOpen && !eligible
+
+  const borderColor = isMine
+    ? 'var(--teal-border)'
+    : isTaken
+    ? 'var(--border-md)'
+    : isLocked
+    ? 'var(--border-dim)'
+    : 'var(--border)'
+
+  const bg = isMine
+    ? 'var(--teal-dim)'
+    : isTaken
+    ? 'var(--surface-xs)'
+    : isLocked
+    ? 'transparent'
+    : 'var(--surface-sm)'
 
   return (
     <div
@@ -25,6 +49,7 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
         background: bg, border: `1px solid ${borderColor}`,
         borderRadius: 'var(--radius-md)', backdropFilter: 'blur(12px)',
         transition: 'background 0.25s, border-color 0.25s',
+        opacity: isLocked ? 0.45 : 1,
       }}
     >
       {/* Left: course color bar */}
@@ -55,10 +80,15 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
 
       {/* Action */}
       <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-        {isOpen && onClaim && (
+        {isOpen && eligible && onClaim && (
           <button className="btn btn-teal" style={{ fontSize: 12, padding: '8px 14px', minHeight: 36 }} onClick={handleClaim}>
             Claim
           </button>
+        )}
+        {isLocked && (
+          <span className="chip chip-muted" style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4, color: 'var(--text-4)' }}>
+            <LockIcon /> Not eligible
+          </span>
         )}
         {isMine && onUnclaim && (
           <button

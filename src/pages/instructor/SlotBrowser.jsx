@@ -1,25 +1,40 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useSlots } from '../../hooks/useSlots'
-import { COURSE_LIST, formatDate } from '../../data/courses'
+import { formatDate } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
 export default function SlotBrowser() {
-  const navigate = useNavigate()
-  const { claims, addClaim, removeClaim } = useApp()
-  const name = localStorage.getItem('apex_instructor_name') || ''
+  const { claims, addClaim, removeClaim, instructors, courses } = useApp()
+  const name        = localStorage.getItem('apex_instructor_name') || ''
+  const instructorId = localStorage.getItem('apex_instructor_id') || null
 
-  const [dayFilter, setDayFilter] = useState(null)
+  const [dayFilter, setDayFilter]       = useState(null)
   const [courseFilter, setCourseFilter] = useState(null)
   const [pendingClaim, setPendingClaim] = useState(null)
   const [conflictSlot, setConflictSlot] = useState(null)
   const [pendingUnclaim, setPendingUnclaim] = useState(null)
 
   const slots = useSlots({ dayFilter, courseFilter })
+
+  // Derive this instructor's eligible module IDs
+  const eligibleModuleIds = useMemo(() => {
+    if (!instructorId) return null // null = no id stored, show all
+    const inst = instructors.find(i => i.id === instructorId)
+    if (!inst) return null
+    return new Set(inst.eligibleModules || [])
+  }, [instructorId, instructors])
+
+  function isEligible(slot) {
+    // If no moduleId on slot (course not fully configured), show to everyone
+    if (!slot.moduleId) return true
+    // If no instructor id matched, show all (graceful fallback)
+    if (!eligibleModuleIds) return true
+    return eligibleModuleIds.has(slot.moduleId)
+  }
 
   function handleClaim(slot) {
     const conflict = claims.find(cl =>
@@ -50,10 +65,6 @@ export default function SlotBrowser() {
     setPendingClaim(null)
   }
 
-  function handleUnclaim(slot) {
-    setPendingUnclaim(slot)
-  }
-
   function confirmUnclaim() {
     if (pendingUnclaim?.claim) removeClaim(pendingUnclaim.claim.id)
     setPendingUnclaim(null)
@@ -81,16 +92,31 @@ export default function SlotBrowser() {
               </div>
             </div>
 
-            {/* Day filters */}
+            {/* Filters */}
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8 }}>
-              <button className={`filter-pill ${dayFilter === null && courseFilter === null ? 'on-instructor' : ''}`} onClick={() => { setDayFilter(null); setCourseFilter(null) }}>All</button>
-              {[1,2,3,4,5].map(d => (
-                <button key={d} className={`filter-pill ${dayFilter === d ? 'on-instructor' : ''}`} onClick={() => setDayFilter(dayFilter === d ? null : d)}>D{d}</button>
+              <button
+                className={`filter-pill ${dayFilter === null && courseFilter === null ? 'on-instructor' : ''}`}
+                onClick={() => { setDayFilter(null); setCourseFilter(null) }}
+              >
+                All
+              </button>
+              {[1, 2, 3, 4, 5].map(d => (
+                <button
+                  key={d}
+                  className={`filter-pill ${dayFilter === d ? 'on-instructor' : ''}`}
+                  onClick={() => setDayFilter(dayFilter === d ? null : d)}
+                >
+                  D{d}
+                </button>
               ))}
-              {COURSE_LIST.map(c => (
-                <button key={c.id} className={`filter-pill ${courseFilter === c.id ? 'on-instructor' : ''}`} onClick={() => setCourseFilter(courseFilter === c.id ? null : c.id)}>
+              {courses.map(c => (
+                <button
+                  key={c.id}
+                  className={`filter-pill ${courseFilter === c.id ? 'on-instructor' : ''}`}
+                  onClick={() => setCourseFilter(courseFilter === c.id ? null : c.id)}
+                >
                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, display: 'inline-block', marginRight: 2 }} />
-                  {c.code}: {c.shortName}
+                  {c.code}{c.shortName ? `: ${c.shortName}` : ''}
                 </button>
               ))}
             </div>
@@ -126,8 +152,9 @@ export default function SlotBrowser() {
                       key={slot.id}
                       slot={slot}
                       currentName={name}
+                      eligible={isEligible(slot)}
                       onClaim={() => handleClaim(slot)}
-                      onUnclaim={() => handleUnclaim(slot)}
+                      onUnclaim={() => setPendingUnclaim(slot)}
                     />
                   ))}
                 </div>
