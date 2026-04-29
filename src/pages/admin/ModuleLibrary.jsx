@@ -6,7 +6,16 @@ import BottomSheet from '../../components/BottomSheet'
 
 const TAG_OPTIONS = ['AI', 'Business', 'Creative', 'Technical', 'Marketing', 'Design', 'Operations']
 
-function ModuleForm({ initial, onSave, onCancel }) {
+function DupWarning({ text }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: 11, color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {text}
+    </div>
+  )
+}
+
+function ModuleForm({ initial, onSave, onCancel, allModules }) {
   const [name, setName]               = useState(initial?.name || '')
   const [desc, setDesc]               = useState(initial?.description || '')
   const [tags, setTags]               = useState(initial?.tags || [])
@@ -14,6 +23,9 @@ function ModuleForm({ initial, onSave, onCancel }) {
   const [durationHours, setDuration]  = useState(initial?.durationHours ?? 2)
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState(null)
+
+  const otherModules = (allModules || []).filter(m => !initial || m.id !== initial.id)
+  const dupName = name.trim().length >= 2 && otherModules.some(m => m.name.toLowerCase() === name.trim().toLowerCase())
 
   function toggleTag(t) {
     setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
@@ -27,7 +39,7 @@ function ModuleForm({ initial, onSave, onCancel }) {
   }
 
   async function handleSave() {
-    if (name.trim().length < 2) return
+    if (name.trim().length < 2 || dupName) return
     setSaving(true)
     setError(null)
     const result = await onSave({ name: name.trim(), description: desc.trim(), tags, durationHours: parseFloat(durationHours) || 2 })
@@ -42,7 +54,15 @@ function ModuleForm({ initial, onSave, onCancel }) {
       <div style={{ display: 'flex', gap: 10 }}>
         <div style={{ flex: 1 }}>
           <label style={labelStyle}>Module name</label>
-          <input className="input" placeholder="e.g. AI Foundations" value={name} onChange={e => setName(e.target.value)} autoFocus />
+          <input
+            className="input"
+            placeholder="e.g. AI Foundations"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            autoFocus
+            style={{ borderColor: dupName ? 'var(--red)' : undefined }}
+          />
+          {dupName && <DupWarning text="A module with this name already exists" />}
         </div>
         <div style={{ width: 90 }}>
           <label style={labelStyle}>Hours</label>
@@ -104,7 +124,7 @@ function ModuleForm({ initial, onSave, onCancel }) {
         </div>
       )}
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2 || saving}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2 || dupName || saving}>
           {saving ? 'Saving…' : (initial ? 'Save Changes' : 'Create Module')}
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel} disabled={saving}>Cancel</button>
@@ -244,11 +264,11 @@ export default function ModuleLibrary() {
       </div>
 
       <BottomSheet isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Module">
-        <ModuleForm onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+        <ModuleForm allModules={modules} onSave={handleCreate} onCancel={() => setShowCreate(false)} />
       </BottomSheet>
 
       <BottomSheet isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Module">
-        {editing && <ModuleForm initial={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
+        {editing && <ModuleForm initial={editing} allModules={modules} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
       </BottomSheet>
 
       <BottomSheet isOpen={!!confirmDelete} onClose={() => { setConfirmDelete(null); setDeleteError(null) }} title="Delete module?">

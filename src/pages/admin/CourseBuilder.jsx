@@ -13,6 +13,15 @@ import BottomSheet from '../../components/BottomSheet'
 
 const COLORS = ['#7c6af7','#ec4899','#f59e0b','#22c55e','#2dd4bf','#3b82f6','#f97316','#a78bfa','#e11d48','#0ea5e9']
 
+function DupWarning({ text }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5, fontSize: 11, color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      {text}
+    </div>
+  )
+}
+
 function totalHours(slots, modules) {
   return slots.reduce((sum, slot) => {
     const mod = modules.find(m => m.id === slot.moduleId)
@@ -355,8 +364,15 @@ export default function CourseBuilder() {
     setView('edit')
   }
 
+  // Duplicate detection — exclude self when editing
+  const otherCourses = (courses || []).filter(c => !editCourse || c.id !== editCourse.id)
+  const dupCode  = code.trim().length > 0  && otherCourses.some(c => c.code.toUpperCase() === code.trim().toUpperCase())
+  const dupName  = name.trim().length > 0  && otherCourses.some(c => c.name.toLowerCase() === name.trim().toLowerCase())
+  const dupTitle = fullTitle.trim().length > 0 && otherCourses.some(c => (c.fullTitle || '').toLowerCase() === fullTitle.trim().toLowerCase())
+  const hasDup   = dupCode || dupName || dupTitle
+
   function handleSave() {
-    if (!name.trim() || !code.trim()) return
+    if (!name.trim() || !code.trim() || hasDup) return
     const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), color, days: slots, groups }
     if (editCourse) updateCourse({ ...editCourse, ...payload })
     else addCourse({ id: crypto.randomUUID(), ...payload, createdAt: new Date().toISOString() })
@@ -483,7 +499,7 @@ export default function CourseBuilder() {
                     {editCourse ? 'Edit Course' : 'New Course'}
                   </h1>
                 </div>
-                <button className="btn btn-primary" onClick={handleSave} disabled={!name.trim() || !code.trim()} style={{ padding: '6px 16px' }}>
+                <button className="btn btn-primary" onClick={handleSave} disabled={!name.trim() || !code.trim() || hasDup} style={{ padding: '6px 16px' }}>
                   Save
                 </button>
               </div>
@@ -498,16 +514,37 @@ export default function CourseBuilder() {
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div style={{ width: 80 }}>
                     <label style={labelStyle}>Code</label>
-                    <input className="input" placeholder="C7" value={code} onChange={e => setCode(e.target.value)} style={{ textTransform: 'uppercase' }} />
+                    <input
+                      className="input"
+                      placeholder="C7"
+                      value={code}
+                      onChange={e => setCode(e.target.value)}
+                      style={{ textTransform: 'uppercase', borderColor: dupCode ? 'var(--red)' : undefined }}
+                    />
+                    {dupCode && <DupWarning text="Code already exists" />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={labelStyle}>Short name</label>
-                    <input className="input" placeholder="e.g. AI Basics" value={name} onChange={e => setName(e.target.value)} />
+                    <input
+                      className="input"
+                      placeholder="e.g. AI Basics"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      style={{ borderColor: dupName ? 'var(--red)' : undefined }}
+                    />
+                    {dupName && <DupWarning text="Name already exists" />}
                   </div>
                 </div>
                 <div>
                   <label style={labelStyle}>Full title (optional)</label>
-                  <input className="input" placeholder="e.g. Build Your AI Foundation" value={fullTitle} onChange={e => setFullTitle(e.target.value)} />
+                  <input
+                    className="input"
+                    placeholder="e.g. Build Your AI Foundation"
+                    value={fullTitle}
+                    onChange={e => setFullTitle(e.target.value)}
+                    style={{ borderColor: dupTitle ? 'var(--red)' : undefined }}
+                  />
+                  {dupTitle && <DupWarning text="A course with this title already exists" />}
                 </div>
                 <div>
                   <label style={labelStyle}>Course colour</label>
