@@ -24,6 +24,35 @@ function isWeekend(dateStr) {
   return [0, 6].includes(new Date(dateStr + 'T00:00:00').getDay())
 }
 
+function toMins(timeStr) {
+  if (!timeStr) return -1
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + m
+}
+
+function getOverlapIndices(slotDates, courseSlots, modules) {
+  const conflicting = new Set()
+  for (let i = 0; i < slotDates.length; i++) {
+    const si = slotDates[i]
+    if (!si?.date || !si?.startTime) continue
+    const modI   = modules.find(m => m.id === courseSlots[i]?.moduleId)
+    const startI = toMins(si.startTime)
+    const endI   = startI + Math.round((modI?.durationHours || 1) * 60)
+    for (let j = i + 1; j < slotDates.length; j++) {
+      const sj = slotDates[j]
+      if (!sj?.date || !sj?.startTime || sj.date !== si.date) continue
+      const modJ   = modules.find(m => m.id === courseSlots[j]?.moduleId)
+      const startJ = toMins(sj.startTime)
+      const endJ   = startJ + Math.round((modJ?.durationHours || 1) * 60)
+      if (startI < endJ && startJ < endI) {
+        conflicting.add(i)
+        conflicting.add(j)
+      }
+    }
+  }
+  return conflicting
+}
+
 export default function CreateCohort() {
   const navigate = useNavigate()
   const { courses, modules, addCohort } = useApp()
@@ -45,8 +74,10 @@ export default function CreateCohort() {
     setSlotDates(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
   }
 
-  const allDatesSet = slotDates.length > 0 && slotDates.every(s => !!s.date)
-  const canCreate   = !!courseId && allDatesSet
+  const overlapIndices = getOverlapIndices(slotDates, courseSlots, modules)
+  const hasOverlap     = overlapIndices.size > 0
+  const allDatesSet    = slotDates.length > 0 && slotDates.every(s => !!s.date)
+  const canCreate      = !!courseId && allDatesSet && !hasOverlap
 
   function handleCreate() {
     addCohort({
@@ -150,13 +181,16 @@ export default function CreateCohort() {
                   const s         = slotDates[i] || { date: '', startTime: '09:00' }
                   const endTime   = mod ? calcEndTime(s.startTime, mod.durationHours) : ''
                   const weekend   = isWeekend(s.date)
+                  const hasConflict = overlapIndices.has(i)
 
                   return (
                     <div
                       key={slot.id || i}
                       style={{
-                        background: 'var(--surface-sm)', border: '1px solid var(--border-dim)',
+                        background: 'var(--surface-sm)',
+                        border: `1px solid ${hasConflict ? 'var(--red)' : 'var(--border-dim)'}`,
                         borderRadius: 'var(--radius-sm)', padding: '12px 14px',
+                        transition: 'border-color 150ms',
                       }}
                     >
                       {/* Module label row */}
@@ -212,7 +246,7 @@ export default function CreateCohort() {
                       </div>
 
                       {/* Inline hints */}
-                      <div style={{ marginTop: 6, display: 'flex', gap: 10 }}>
+                      <div style={{ marginTop: 6, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                         {s.date && (
                           <span style={{ fontSize: 11, color: weekend ? 'var(--amber)' : 'var(--text-4)' }}>
                             {formatDateShort(s.date)}{weekend ? ' · weekend' : ''}
@@ -224,6 +258,12 @@ export default function CreateCohort() {
                           </span>
                         )}
                       </div>
+                      {hasConflict && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 7, fontSize: 11, color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          Time overlaps with another module on this date
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -262,7 +302,9 @@ export default function CreateCohort() {
             >
               {canCreate
                 ? `Create Schedule · ${courseSlots.length} modules, ${sections} section${sections !== 1 ? 's' : ''}`
-                : 'Set a date for each module to continue'}
+                : hasOverlap
+                  ? 'Resolve time overlaps to continue'
+                  : 'Set a date for each module to continue'}
             </button>
           )}
         </div>
