@@ -13,10 +13,17 @@ import BottomSheet from '../../components/BottomSheet'
 
 const COLORS = ['#7c6af7','#ec4899','#f59e0b','#22c55e','#2dd4bf','#3b82f6','#f97316','#a78bfa','#e11d48','#0ea5e9']
 
-// ── Drag-handle sortable day row ──────────────────────────────────────────────
-function SortableDayRow({ day, index, modules, onEdit, onRemove }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: day.id })
-  const mod = modules.find(m => m.id === day.moduleId)
+function totalHours(slots, modules) {
+  return slots.reduce((sum, slot) => {
+    const mod = modules.find(m => m.id === slot.moduleId)
+    return sum + (mod?.durationHours ?? 0)
+  }, 0)
+}
+
+// ── Drag-handle sortable module slot row ──────────────────────────────────────
+function SortableSlotRow({ slot, index, modules, onEdit, onRemove }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: slot.id })
+  const mod = modules.find(m => m.id === slot.moduleId)
 
   return (
     <div
@@ -31,14 +38,12 @@ function SortableDayRow({ day, index, modules, onEdit, onRemove }) {
         borderRadius: 'var(--radius-sm)',
       }}
     >
-      {/* Drag handle */}
       <div {...attributes} {...listeners} style={{ cursor: 'grab', color: 'var(--text-4)', flexShrink: 0, display: 'flex', touchAction: 'none' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
         </svg>
       </div>
 
-      {/* Day number badge */}
       <div style={{
         width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
         background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
@@ -50,28 +55,27 @@ function SortableDayRow({ day, index, modules, onEdit, onRemove }) {
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 2 }}>
-          {mod ? mod.name : <span style={{ color: 'var(--text-4)' }}>No module selected</span>}
+          {slot.label || (mod ? mod.name : <span style={{ color: 'var(--text-4)' }}>No module selected</span>)}
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-          {day.startTime} · {day.hoursPerDay}h
-          {day.label && <> · {day.label}</>}
+          {mod ? `${mod.durationHours}h` : '—'}
+          {slot.label && mod ? ` · ${mod.name}` : ''}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button className="btn btn-ghost" onClick={() => onEdit(day)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26 }}>Edit</button>
-        <button className="btn btn-ghost" onClick={() => onRemove(day.id)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26, color: 'var(--red)' }}>×</button>
+        <button className="btn btn-ghost" onClick={() => onEdit(slot)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26 }}>Edit</button>
+        <button className="btn btn-ghost" onClick={() => onRemove(slot.id)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26, color: 'var(--red)' }}>×</button>
       </div>
     </div>
   )
 }
 
-// ── Day edit form ─────────────────────────────────────────────────────────────
-function DayForm({ day, modules, onSave, onCancel }) {
-  const [moduleId, setModuleId]     = useState(day?.moduleId || '')
-  const [label, setLabel]           = useState(day?.label || '')
-  const [startTime, setStartTime]   = useState(day?.startTime || '09:00')
-  const [hoursPerDay, setHoursPerDay] = useState(day?.hoursPerDay || 8)
+// ── Module slot form ──────────────────────────────────────────────────────────
+function SlotForm({ slot, modules, onSave, onCancel }) {
+  const [moduleId, setModuleId] = useState(slot?.moduleId || '')
+  const [label, setLabel]       = useState(slot?.label || '')
+  const selectedMod = modules.find(m => m.id === moduleId)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -79,26 +83,30 @@ function DayForm({ day, modules, onSave, onCancel }) {
         <label style={labelStyle}>Module</label>
         <select className="input" value={moduleId} onChange={e => setModuleId(e.target.value)}>
           <option value="">— select a module —</option>
-          {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          {modules.map(m => (
+            <option key={m.id} value={m.id}>{m.name} ({m.durationHours}h)</option>
+          ))}
         </select>
+        {selectedMod && (
+          <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-3)' }}>
+            Duration: <strong style={{ color: 'var(--text-2)' }}>{selectedMod.durationHours}h</strong>
+            {selectedMod.description && <> · {selectedMod.description}</>}
+          </div>
+        )}
       </div>
       <div>
-        <label style={labelStyle}>Day label (optional override)</label>
-        <input className="input" placeholder="e.g. Build Day 1" value={label} onChange={e => setLabel(e.target.value)} />
-      </div>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Start time</label>
-          <input className="input" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
-        </div>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Hours per day</label>
-          <input className="input" type="number" min={1} max={12} step={0.5} value={hoursPerDay} onChange={e => setHoursPerDay(parseFloat(e.target.value))} />
-        </div>
+        <label style={labelStyle}>Display label (optional)</label>
+        <input className="input" placeholder={selectedMod ? selectedMod.name : 'Override the module name for this slot…'} value={label} onChange={e => setLabel(e.target.value)} />
+        <div style={{ marginTop: 4, fontSize: 11, color: 'var(--text-4)' }}>Leave blank to use the module name.</div>
       </div>
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...day, moduleId, label, startTime, hoursPerDay })}>
-          Save Day
+        <button
+          className="btn btn-primary"
+          style={{ flex: 1 }}
+          disabled={!moduleId}
+          onClick={() => onSave({ ...slot, moduleId, label })}
+        >
+          {slot ? 'Save' : 'Add to Course'}
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
       </div>
@@ -107,8 +115,8 @@ function DayForm({ day, modules, onSave, onCancel }) {
 }
 
 // ── Instructor group rules ────────────────────────────────────────────────────
-function GroupRules({ days, groups, onChange }) {
-  const [editGroup, setEditGroup] = useState(null)
+function GroupRules({ slots, groups, onChange }) {
+  const [editGroup, setEditGroup]     = useState(null)
   const [newGroupName, setNewGroupName] = useState('')
 
   function addGroup() {
@@ -121,11 +129,11 @@ function GroupRules({ days, groups, onChange }) {
     onChange(groups.filter(g => g.id !== id))
   }
 
-  function toggleDayInGroup(groupId, dayIndex) {
+  function toggleSlotInGroup(groupId, slotIndex) {
     onChange(groups.map(g => {
       if (g.id !== groupId) return g
-      const has = g.dayIndexes.includes(dayIndex)
-      return { ...g, dayIndexes: has ? g.dayIndexes.filter(i => i !== dayIndex) : [...g.dayIndexes, dayIndex].sort((a,b)=>a-b) }
+      const has = g.dayIndexes.includes(slotIndex)
+      return { ...g, dayIndexes: has ? g.dayIndexes.filter(i => i !== slotIndex) : [...g.dayIndexes, slotIndex].sort((a,b)=>a-b) }
     }))
   }
 
@@ -137,7 +145,7 @@ function GroupRules({ days, groups, onChange }) {
   return (
     <div>
       <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.5 }}>
-        Group days that must be taught by the same instructor. E.g. if Days 1 and 2 cover the same topic, put them in one group.
+        Group modules that must be taught by the same instructor.
       </p>
 
       {groups.map(group => (
@@ -163,12 +171,12 @@ function GroupRules({ days, groups, onChange }) {
             <button className="btn btn-ghost" onClick={() => removeGroup(group.id)} style={{ fontSize: 11, padding: '2px 8px', minHeight: 24, color: 'var(--red)' }}>Remove</button>
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {days.map((day, idx) => {
+            {slots.map((slot, idx) => {
               const selected = group.dayIndexes.includes(idx)
               return (
                 <button
-                  key={day.id}
-                  onClick={() => toggleDayInGroup(group.id, idx)}
+                  key={slot.id}
+                  onClick={() => toggleSlotInGroup(group.id, idx)}
                   style={{
                     fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600,
                     padding: '4px 10px', borderRadius: 'var(--radius-full)',
@@ -178,7 +186,7 @@ function GroupRules({ days, groups, onChange }) {
                     cursor: 'pointer',
                   }}
                 >
-                  Day {idx + 1}
+                  Slot {idx + 1}
                 </button>
               )
             })}
@@ -199,38 +207,37 @@ export default function CourseBuilder() {
   const navigate = useNavigate()
   const { modules, courses, addCourse, updateCourse, deleteCourse } = useApp()
 
-  const [view, setView]         = useState('list')  // 'list' | 'edit'
+  const [view, setView]             = useState('list')
   const [editCourse, setEditCourse] = useState(null)
 
-  // Course form fields
-  const [name, setName]         = useState('')
-  const [code, setCode]         = useState('')
+  const [name, setName]           = useState('')
+  const [code, setCode]           = useState('')
   const [fullTitle, setFullTitle] = useState('')
-  const [color, setColor]       = useState(COLORS[0])
-  const [days, setDays]         = useState([])
-  const [groups, setGroups]     = useState([])
-  const [editDay, setEditDay]   = useState(null)
-  const [showAddDay, setShowAddDay] = useState(false)
+  const [color, setColor]         = useState(COLORS[0])
+  const [slots, setSlots]         = useState([])
+  const [groups, setGroups]       = useState([])
+  const [editSlot, setEditSlot]   = useState(null)
+  const [showAddSlot, setShowAddSlot] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   function openCreate() {
     setEditCourse(null)
-    setName(''); setCode(''); setFullTitle(''); setColor(COLORS[0]); setDays([]); setGroups([])
+    setName(''); setCode(''); setFullTitle(''); setColor(COLORS[0]); setSlots([]); setGroups([])
     setView('edit')
   }
 
   function openEdit(course) {
     setEditCourse(course)
     setName(course.name); setCode(course.code); setFullTitle(course.fullTitle || ''); setColor(course.color || COLORS[0])
-    setDays(course.days || []); setGroups(course.groups || [])
+    setSlots(course.days || []); setGroups(course.groups || [])
     setView('edit')
   }
 
   function handleSave() {
     if (!name.trim() || !code.trim()) return
-    const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), color, days, groups }
+    const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), color, days: slots, groups }
     if (editCourse) {
       updateCourse({ ...editCourse, ...payload })
     } else {
@@ -242,7 +249,7 @@ export default function CourseBuilder() {
   function handleDragEnd(event) {
     const { active, over } = event
     if (active.id !== over?.id) {
-      setDays(prev => {
+      setSlots(prev => {
         const oldIdx = prev.findIndex(d => d.id === active.id)
         const newIdx = prev.findIndex(d => d.id === over.id)
         return arrayMove(prev, oldIdx, newIdx)
@@ -250,18 +257,18 @@ export default function CourseBuilder() {
     }
   }
 
-  function handleAddDay(dayData) {
-    setDays(prev => [...prev, { id: crypto.randomUUID(), ...dayData }])
-    setShowAddDay(false)
+  function handleAddSlot(slotData) {
+    setSlots(prev => [...prev, { id: crypto.randomUUID(), ...slotData }])
+    setShowAddSlot(false)
   }
 
-  function handleEditDay(dayData) {
-    setDays(prev => prev.map(d => d.id === dayData.id ? dayData : d))
-    setEditDay(null)
+  function handleEditSlot(slotData) {
+    setSlots(prev => prev.map(d => d.id === slotData.id ? slotData : d))
+    setEditSlot(null)
   }
 
-  function removeDay(id) {
-    setDays(prev => prev.filter(d => d.id !== id))
+  function removeSlot(id) {
+    setSlots(prev => prev.filter(d => d.id !== id))
   }
 
   // ── List view ───────────────────────────────────────────────────────────────
@@ -278,7 +285,6 @@ export default function CourseBuilder() {
                   </button>
                   <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Courses</h1>
                 </div>
-                
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
                 {(courses || []).length === 0 ? 'No courses yet.' : `${(courses || []).length} course${(courses || []).length !== 1 ? 's' : ''} defined`}
@@ -294,26 +300,30 @@ export default function CourseBuilder() {
                 <button className="btn btn-primary" onClick={openCreate} style={{ margin: '0 auto' }}>Create your first course</button>
               </div>
             )}
-            {(courses || []).map(course => (
-              <div key={course.id} className="card" style={{ padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 4, height: 40, borderRadius: 2, background: course.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, color: 'var(--text-1)', marginBottom: 2 }}>
-                      {course.code}: {course.name}
+            {(courses || []).map(course => {
+              const hrs = totalHours(course.days || [], modules || [])
+              return (
+                <div key={course.id} className="card" style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 4, height: 40, borderRadius: 2, background: course.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, color: 'var(--text-1)', marginBottom: 2 }}>
+                        {course.code}: {course.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        {(course.days || []).length} module{(course.days || []).length !== 1 ? 's' : ''}
+                        {hrs > 0 && ` · ${hrs}h total`}
+                        {(course.groups || []).length > 0 && ` · ${course.groups.length} instructor group${course.groups.length !== 1 ? 's' : ''}`}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                      {(course.days || []).length} day{(course.days || []).length !== 1 ? 's' : ''}
-                      {(course.groups || []).length > 0 && ` · ${course.groups.length} instructor group${course.groups.length !== 1 ? 's' : ''}`}
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button className="btn btn-ghost" onClick={() => openEdit(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}>Edit</button>
+                      <button className="btn btn-ghost" onClick={() => setConfirmDelete(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, color: 'var(--red)' }}>Delete</button>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button className="btn btn-ghost" onClick={() => openEdit(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}>Edit</button>
-                    <button className="btn btn-ghost" onClick={() => setConfirmDelete(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, color: 'var(--red)' }}>Delete</button>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
@@ -340,6 +350,8 @@ export default function CourseBuilder() {
   }
 
   // ── Edit view ───────────────────────────────────────────────────────────────
+  const hrs = totalHours(slots, modules || [])
+
   return (
     <div className="admin-bg">
       <div className="z1 page">
@@ -363,7 +375,6 @@ export default function CourseBuilder() {
 
         <div style={{ padding: '0 16px', paddingBottom: 100, display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-          {/* Basic info */}
           <section>
             <div style={sectionHeader}>Course Info</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -379,7 +390,7 @@ export default function CourseBuilder() {
               </div>
               <div>
                 <label style={labelStyle}>Full title (optional)</label>
-                <input className="input" placeholder="e.g. Build Your AI Foundation in 5 Days" value={fullTitle} onChange={e => setFullTitle(e.target.value)} />
+                <input className="input" placeholder="e.g. Build Your AI Foundation" value={fullTitle} onChange={e => setFullTitle(e.target.value)} />
               </div>
               <div>
                 <label style={labelStyle}>Course colour</label>
@@ -400,33 +411,35 @@ export default function CourseBuilder() {
             </div>
           </section>
 
-          {/* Day structure */}
           <section>
             <div style={{ ...sectionHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Day Structure</span>
-              <button className="btn btn-ghost" onClick={() => setShowAddDay(true)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 28 }}>+ Add Day</button>
+              <span>
+                Module Sequence
+                {hrs > 0 && <span style={{ fontWeight: 400, color: 'var(--text-4)', marginLeft: 8 }}>{hrs}h total</span>}
+              </span>
+              <button className="btn btn-ghost" onClick={() => setShowAddSlot(true)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 28 }}>+ Add Module</button>
             </div>
-            {days.length === 0 && (
+            {slots.length === 0 && (
               <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8 }}>
-                No days yet. Add days to define the course schedule.
+                No modules yet. Add modules from the library to build this course.
               </p>
             )}
-            {modules.length === 0 && days.length === 0 && (
+            {(modules || []).length === 0 && slots.length === 0 && (
               <p style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>
-                No modules in the library yet — create modules first so you can assign them to days.
+                No modules in the library — create modules first so you can add them here.
               </p>
             )}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={days.map(d => d.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={slots.map(d => d.id)} strategy={verticalListSortingStrategy}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {days.map((day, idx) => (
-                    <SortableDayRow
-                      key={day.id}
-                      day={day}
+                  {slots.map((slot, idx) => (
+                    <SortableSlotRow
+                      key={slot.id}
+                      slot={slot}
                       index={idx}
                       modules={modules || []}
-                      onEdit={setEditDay}
-                      onRemove={removeDay}
+                      onEdit={setEditSlot}
+                      onRemove={removeSlot}
                     />
                   ))}
                 </div>
@@ -434,25 +447,22 @@ export default function CourseBuilder() {
             </DndContext>
           </section>
 
-          {/* Instructor groups */}
-          {days.length >= 2 && (
+          {slots.length >= 2 && (
             <section>
               <div style={sectionHeader}>Instructor Groups</div>
-              <GroupRules days={days} groups={groups} onChange={setGroups} />
+              <GroupRules slots={slots} groups={groups} onChange={setGroups} />
             </section>
           )}
 
         </div>
       </div>
 
-      {/* Add day sheet */}
-      <BottomSheet isOpen={showAddDay} onClose={() => setShowAddDay(false)} title="Add Day">
-        <DayForm modules={modules || []} onSave={handleAddDay} onCancel={() => setShowAddDay(false)} />
+      <BottomSheet isOpen={showAddSlot} onClose={() => setShowAddSlot(false)} title="Add Module">
+        <SlotForm modules={modules || []} onSave={handleAddSlot} onCancel={() => setShowAddSlot(false)} />
       </BottomSheet>
 
-      {/* Edit day sheet */}
-      <BottomSheet isOpen={!!editDay} onClose={() => setEditDay(null)} title="Edit Day">
-        {editDay && <DayForm day={editDay} modules={modules || []} onSave={handleEditDay} onCancel={() => setEditDay(null)} />}
+      <BottomSheet isOpen={!!editSlot} onClose={() => setEditSlot(null)} title="Edit Module Slot">
+        {editSlot && <SlotForm slot={editSlot} modules={modules || []} onSave={handleEditSlot} onCancel={() => setEditSlot(null)} />}
       </BottomSheet>
 
       <BottomNav role="admin" />

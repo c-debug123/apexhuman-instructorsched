@@ -7,10 +7,13 @@ import BottomSheet from '../../components/BottomSheet'
 const TAG_OPTIONS = ['AI', 'Business', 'Creative', 'Technical', 'Marketing', 'Design', 'Operations']
 
 function ModuleForm({ initial, onSave, onCancel }) {
-  const [name, setName]        = useState(initial?.name || '')
-  const [desc, setDesc]        = useState(initial?.description || '')
-  const [tags, setTags]        = useState(initial?.tags || [])
-  const [tagInput, setTagInput] = useState('')
+  const [name, setName]               = useState(initial?.name || '')
+  const [desc, setDesc]               = useState(initial?.description || '')
+  const [tags, setTags]               = useState(initial?.tags || [])
+  const [tagInput, setTagInput]       = useState('')
+  const [durationHours, setDuration]  = useState(initial?.durationHours ?? 2)
+  const [saving, setSaving]           = useState(false)
+  const [error, setError]             = useState(null)
 
   function toggleTag(t) {
     setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
@@ -23,16 +26,36 @@ function ModuleForm({ initial, onSave, onCancel }) {
     setTagInput('')
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (name.trim().length < 2) return
-    onSave({ name: name.trim(), description: desc.trim(), tags })
+    setSaving(true)
+    setError(null)
+    const result = await onSave({ name: name.trim(), description: desc.trim(), tags, durationHours: parseFloat(durationHours) || 2 })
+    if (result?.error) {
+      setError(result.error)
+      setSaving(false)
+    }
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div>
-        <label style={labelStyle}>Module name</label>
-        <input className="input" placeholder="e.g. AI Foundations" value={name} onChange={e => setName(e.target.value)} autoFocus />
+      <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ flex: 1 }}>
+          <label style={labelStyle}>Module name</label>
+          <input className="input" placeholder="e.g. AI Foundations" value={name} onChange={e => setName(e.target.value)} autoFocus />
+        </div>
+        <div style={{ width: 90 }}>
+          <label style={labelStyle}>Hours</label>
+          <input
+            className="input"
+            type="number"
+            min={0.5}
+            max={24}
+            step={0.5}
+            value={durationHours}
+            onChange={e => setDuration(e.target.value)}
+          />
+        </div>
       </div>
       <div>
         <label style={labelStyle}>Description (optional)</label>
@@ -71,15 +94,20 @@ function ModuleForm({ initial, onSave, onCancel }) {
           </span>
         ))}
         <form onSubmit={addCustomTag} style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-          <input className="input" placeholder="Custom tag..." value={tagInput} onChange={e => setTagInput(e.target.value)} style={{ flex: 1, fontSize: 13 }} />
+          <input className="input" placeholder="Custom tag..." value={tagInput} onChange={e => setTagInput(e.target.value)} style={{ flex: 1 }} />
           <button type="submit" className="btn btn-ghost" style={{ padding: '0 12px', fontSize: 12, minHeight: 38 }}>Add</button>
         </form>
       </div>
+      {error && (
+        <div style={{ fontSize: 13, color: 'var(--red)', padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239,68,68,0.2)' }}>
+          Failed to save: {error}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2}>
-          {initial ? 'Save Changes' : 'Create Module'}
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2 || saving}>
+          {saving ? 'Saving…' : (initial ? 'Save Changes' : 'Create Module')}
         </button>
-        <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
+        <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel} disabled={saving}>Cancel</button>
       </div>
     </div>
   )
@@ -88,10 +116,11 @@ function ModuleForm({ initial, onSave, onCancel }) {
 export default function ModuleLibrary() {
   const navigate = useNavigate()
   const { modules, addModule, updateModule, deleteModule } = useApp()
-  const [showCreate, setShowCreate]   = useState(false)
-  const [editing, setEditing]         = useState(null)
+  const [showCreate, setShowCreate]       = useState(false)
+  const [editing, setEditing]             = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [search, setSearch]           = useState('')
+  const [search, setSearch]               = useState('')
+  const [deleteError, setDeleteError]     = useState(null)
 
   const filtered = (modules || []).filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -99,19 +128,27 @@ export default function ModuleLibrary() {
     (m.tags || []).some(t => t.toLowerCase().includes(search.toLowerCase()))
   )
 
-  function handleCreate(data) {
-    addModule({ id: crypto.randomUUID(), ...data, createdAt: new Date().toISOString() })
-    setShowCreate(false)
+  async function handleCreate(data) {
+    const result = await addModule({ id: crypto.randomUUID(), ...data })
+    if (!result?.error) setShowCreate(false)
+    return result
   }
 
-  function handleUpdate(data) {
-    updateModule({ ...editing, ...data })
-    setEditing(null)
+  async function handleUpdate(data) {
+    const result = await updateModule({ ...editing, ...data })
+    if (!result?.error) setEditing(null)
+    return result
   }
 
-  function handleDelete() {
-    if (confirmDelete) deleteModule(confirmDelete.id)
-    setConfirmDelete(null)
+  async function handleDelete() {
+    if (!confirmDelete) return
+    setDeleteError(null)
+    const result = await deleteModule(confirmDelete.id)
+    if (result?.error) {
+      setDeleteError(result.error)
+    } else {
+      setConfirmDelete(null)
+    }
   }
 
   return (
@@ -126,7 +163,6 @@ export default function ModuleLibrary() {
                 </button>
                 <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Module Library</h1>
               </div>
-              
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
               {(modules || []).length === 0
@@ -139,7 +175,7 @@ export default function ModuleLibrary() {
                 placeholder="Search modules..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ flex: 1, fontSize: 13 }}
+                style={{ flex: 1 }}
               />
               <button className="btn btn-primary" onClick={() => setShowCreate(true)} style={{ whiteSpace: 'nowrap' }}>
                 + New Module
@@ -166,8 +202,18 @@ export default function ModuleLibrary() {
             <div key={mod.id} className="card" style={{ padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, color: 'var(--text-1)', marginBottom: 4 }}>
-                    {mod.name}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, color: 'var(--text-1)' }}>
+                      {mod.name}
+                    </div>
+                    <span style={{
+                      fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600,
+                      padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                      background: 'var(--surface-xs)', color: 'var(--text-3)',
+                      border: '1px solid var(--border-dim)', flexShrink: 0,
+                    }}>
+                      {mod.durationHours}h
+                    </span>
                   </div>
                   {mod.description && (
                     <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8, lineHeight: 1.4 }}>
@@ -188,16 +234,8 @@ export default function ModuleLibrary() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => setEditing(mod)}
-                    style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}
-                  >Edit</button>
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => setConfirmDelete(mod)}
-                    style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, color: 'var(--red)' }}
-                  >Delete</button>
+                  <button className="btn btn-ghost" onClick={() => setEditing(mod)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}>Edit</button>
+                  <button className="btn btn-ghost" onClick={() => { setConfirmDelete(mod); setDeleteError(null) }} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, color: 'var(--red)' }}>Delete</button>
                 </div>
               </div>
             </div>
@@ -205,18 +243,15 @@ export default function ModuleLibrary() {
         </div>
       </div>
 
-      {/* Create sheet */}
       <BottomSheet isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Module">
         <ModuleForm onSave={handleCreate} onCancel={() => setShowCreate(false)} />
       </BottomSheet>
 
-      {/* Edit sheet */}
       <BottomSheet isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Module">
         {editing && <ModuleForm initial={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
       </BottomSheet>
 
-      {/* Delete confirmation */}
-      <BottomSheet isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete module?">
+      <BottomSheet isOpen={!!confirmDelete} onClose={() => { setConfirmDelete(null); setDeleteError(null) }} title="Delete module?">
         {confirmDelete && (
           <div>
             <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8, lineHeight: 1.5 }}>
@@ -225,9 +260,14 @@ export default function ModuleLibrary() {
             <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
               This will also remove it from any course structures that use it.
             </p>
+            {deleteError && (
+              <div style={{ fontSize: 13, color: 'var(--red)', marginBottom: 12, padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>
+                Failed to delete: {deleteError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleDelete}>Delete</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setConfirmDelete(null); setDeleteError(null) }}>Cancel</button>
             </div>
           </div>
         )}

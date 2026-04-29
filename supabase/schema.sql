@@ -5,12 +5,16 @@
 
 -- ── Modules ───────────────────────────────────────────────────────────────────
 create table if not exists modules (
-  id          uuid primary key default gen_random_uuid(),
-  name        text not null,
-  description text,
-  tags        text[] not null default '{}',
-  created_at  timestamptz not null default now()
+  id             uuid primary key default gen_random_uuid(),
+  name           text not null,
+  description    text,
+  tags           text[] not null default '{}',
+  duration_hours numeric not null default 2,
+  created_at     timestamptz not null default now()
 );
+
+-- Migration (run if table already exists):
+-- ALTER TABLE modules ADD COLUMN IF NOT EXISTS duration_hours numeric NOT NULL DEFAULT 2;
 
 -- ── Courses ───────────────────────────────────────────────────────────────────
 -- id is a short string like 'c1'…'c6'; admin can add more via the CourseBuilder
@@ -50,8 +54,12 @@ create table if not exists cohorts (
   course_id  text not null references courses(id) on delete restrict,
   start_date date not null,
   sections   integer not null default 1,
+  slot_dates jsonb not null default '[]',
   created_at timestamptz not null default now()
 );
+
+-- Migration (run if table already exists):
+-- ALTER TABLE cohorts ADD COLUMN IF NOT EXISTS slot_dates jsonb NOT NULL DEFAULT '[]';
 
 -- ── Claims ────────────────────────────────────────────────────────────────────
 -- One claim per (cohort, day, section) — enforced by unique constraint

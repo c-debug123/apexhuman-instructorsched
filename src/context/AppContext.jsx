@@ -5,9 +5,9 @@ import { COURSES } from '../data/courses'
 const AppContext = createContext(null)
 
 // ── snake_case → camelCase transforms ─────────────────────────────────────────
-function toModule(r)  { return { id: r.id, name: r.name, description: r.description, tags: r.tags || [], createdAt: r.created_at } }
+function toModule(r)  { return { id: r.id, name: r.name, description: r.description, tags: r.tags || [], durationHours: r.duration_hours ?? 2, createdAt: r.created_at } }
 function toCourse(r)  { return { id: r.id, code: r.code, name: r.name, fullTitle: r.full_title, shortName: r.short_name, color: r.color, num: r.num, track: r.track, days: r.days || [], groups: r.groups || [], createdAt: r.created_at } }
-function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, createdAt: r.created_at } }
+function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, slotDates: r.slot_dates || [], createdAt: r.created_at } }
 function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, eligibleModules: (r.instructor_modules || []).map(m => m.module_id), createdAt: r.created_at } }
 function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, courseId: r.course_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
@@ -93,18 +93,30 @@ export function AppProvider({ children }) {
 
   // ── Modules ───────────────────────────────────────────────────────────────────
   const addModule = useCallback(async (m) => {
-    const { data, error } = await supabase.from('modules').insert({ id: m.id, name: m.name, description: m.description || null, tags: m.tags || [] }).select().single()
-    if (!error && data) setModules(prev => [...prev, toModule(data)])
+    const { data, error } = await supabase.from('modules').insert({
+      id: m.id, name: m.name, description: m.description || null,
+      tags: m.tags || [], duration_hours: m.durationHours ?? 2,
+    }).select().single()
+    if (error) { console.error('addModule failed:', error); return { error: error.message } }
+    setModules(prev => [...prev, toModule(data)])
+    return { error: null }
   }, [])
 
   const updateModule = useCallback(async (m) => {
-    const { data, error } = await supabase.from('modules').update({ name: m.name, description: m.description || null, tags: m.tags || [] }).eq('id', m.id).select().single()
-    if (!error && data) setModules(prev => prev.map(x => x.id === m.id ? toModule(data) : x))
+    const { data, error } = await supabase.from('modules').update({
+      name: m.name, description: m.description || null,
+      tags: m.tags || [], duration_hours: m.durationHours ?? 2,
+    }).eq('id', m.id).select().single()
+    if (error) { console.error('updateModule failed:', error); return { error: error.message } }
+    setModules(prev => prev.map(x => x.id === m.id ? toModule(data) : x))
+    return { error: null }
   }, [])
 
   const deleteModule = useCallback(async (id) => {
     const { error } = await supabase.from('modules').delete().eq('id', id)
-    if (!error) setModules(prev => prev.filter(x => x.id !== id))
+    if (error) { console.error('deleteModule failed:', error); return { error: error.message } }
+    setModules(prev => prev.filter(x => x.id !== id))
+    return { error: null }
   }, [])
 
   // ── Courses ───────────────────────────────────────────────────────────────────
@@ -130,7 +142,7 @@ export function AppProvider({ children }) {
 
   // ── Cohorts ───────────────────────────────────────────────────────────────────
   const addCohort = useCallback(async (cohort) => {
-    const row = { id: cohort.id, course_id: cohort.courseId, start_date: cohort.startDate, sections: cohort.sections }
+    const row = { id: cohort.id, course_id: cohort.courseId, start_date: cohort.startDate, sections: cohort.sections, slot_dates: cohort.slotDates || [] }
     const { data, error } = await supabase.from('cohorts').insert(row).select().single()
     if (!error && data) {
       setCohorts(prev => [...prev, toCohort(data)])
