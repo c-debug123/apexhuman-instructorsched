@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useSlotsForCohort } from '../../hooks/useSlots'
-import { addDays, formatDateShort } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import CourseBadge from '../../components/CourseBadge'
@@ -11,10 +10,26 @@ function BackIcon() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
 }
 
+function calcEndTime(startTime, durationHours) {
+  if (!startTime || !durationHours) return ''
+  const [h, m] = startTime.split(':').map(Number)
+  const totalMins = h * 60 + m + Math.round(durationHours * 60)
+  const endH = Math.floor(totalMins / 60) % 24
+  const endM = totalMins % 60
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+}
+
+function formatDateMed(dateStr) {
+  if (!dateStr) return '—'
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+  })
+}
+
 export default function CohortDetail() {
   const { id }   = useParams()
   const navigate = useNavigate()
-  const { cohorts, courses, claims, removeClaim, deleteCohort } = useApp()
+  const { cohorts, courses, modules, claims, removeClaim, deleteCohort } = useApp()
   const cohort = cohorts.find(c => c.id === id)
   const slots  = useSlotsForCohort(id)
   const [pendingUnclaim, setPendingUnclaim] = useState(null)
@@ -33,8 +48,7 @@ export default function CohortDetail() {
   }
 
   const course   = courses.find(c => c.id === cohort.courseId)
-  const dayCount = course?.days?.length || 5
-  const endDate  = addDays(cohort.startDate, dayCount - 1)
+  const dayCount = course?.days?.length || 0
   const total    = cohort.sections * dayCount
   const filled   = claims.filter(cl => cl.cohortId === id).length
 
@@ -44,6 +58,8 @@ export default function CohortDetail() {
   function handleCellTap(slot)   { if (slot?.claim) setPendingUnclaim(slot) }
   function confirmUnclaim()      { if (pendingUnclaim?.claim) removeClaim(pendingUnclaim.claim.id); setPendingUnclaim(null) }
   function confirmDelete()       { deleteCohort(id); navigate('/admin') }
+
+  const slotDates = cohort.slotDates || []
 
   return (
     <div className="admin-bg">
@@ -57,18 +73,81 @@ export default function CohortDetail() {
             <button className="btn btn-ghost" style={{ fontSize: 12, color: 'var(--red)', padding: '8px 4px' }} onClick={() => setShowDelete(true)}>Delete</button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '0 4px' }}>
-            <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
-              {formatDateShort(cohort.startDate)} – {formatDateShort(endDate)}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20, padding: '0 4px', flexWrap: 'wrap' }}>
             <span className="chip chip-muted">{cohort.sections} section{cohort.sections !== 1 ? 's' : ''}</span>
-            <span className="chip" style={{ background: filled === total ? 'var(--green-dim)' : 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.3)', color: filled === total ? 'var(--green)' : 'var(--amber)' }}>
-              {filled}/{total}
+            <span className="chip" style={{
+              background: filled === total ? 'var(--green-dim)' : 'var(--amber-dim)',
+              border: '1px solid rgba(245,158,11,0.3)',
+              color: filled === total ? 'var(--green)' : 'var(--amber)',
+            }}>
+              {filled}/{total} filled
             </span>
           </div>
         </div>
 
-        {/* Slot grid — dynamic column count */}
+        {/* Module schedule with times */}
+        {slotDates.length > 0 && (
+          <div style={{ padding: '0 16px', marginBottom: 24 }}>
+            <div className="section-label" style={{ marginBottom: 10 }}>Module Schedule</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {(course?.days || []).map((courseSlot, i) => {
+                const mod     = modules.find(m => m.id === courseSlot?.moduleId)
+                const sd      = slotDates[i]
+                const endTime = sd ? calcEndTime(sd.startTime, mod?.durationHours) : ''
+                const label   = courseSlot?.label || mod?.name || `Module ${i + 1}`
+                return (
+                  <div
+                    key={courseSlot?.id || i}
+                    className="card"
+                    style={{ padding: '12px 14px', display: 'flex', gap: 14, alignItems: 'flex-start' }}
+                  >
+                    {/* Index badge */}
+                    <div style={{
+                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                      background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10, color: 'var(--accent)',
+                      marginTop: 1,
+                    }}>
+                      {i + 1}
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 4 }}>
+                        {label}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {sd?.date ? (
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{formatDateMed(sd.date)}</span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: 'var(--text-4)' }}>No date set</span>
+                        )}
+                        {sd?.startTime && (
+                          <span style={{ fontSize: 12, color: 'var(--accent)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                            {sd.startTime}{endTime ? ` – ${endTime}` : ''}
+                          </span>
+                        )}
+                        {mod?.durationHours && (
+                          <span style={{
+                            fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600,
+                            padding: '2px 7px', borderRadius: 'var(--radius-full)',
+                            background: 'var(--surface-xs)', color: 'var(--text-3)',
+                            border: '1px solid var(--border-dim)',
+                          }}>
+                            {mod.durationHours}h
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Slot grid */}
         <div style={{ padding: '0 16px', marginBottom: 24 }}>
           <div className="section-label" style={{ marginBottom: 10 }}>Slot Grid</div>
           <div style={{ overflowX: 'auto', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
@@ -98,7 +177,17 @@ export default function CohortDetail() {
                       const hasClaim = !!slot?.claim
                       const label    = slot?.moduleName || slot?.instructorType || ''
                       return (
-                        <td key={di} onClick={() => handleCellTap(slot)} style={{ padding: '8px 6px', textAlign: 'center', background: hasClaim ? 'var(--teal-dim)' : 'transparent', cursor: hasClaim ? 'pointer' : 'default', borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none', transition: 'background 0.15s' }}>
+                        <td
+                          key={di}
+                          onClick={() => handleCellTap(slot)}
+                          style={{
+                            padding: '8px 6px', textAlign: 'center',
+                            background: hasClaim ? 'var(--teal-dim)' : 'transparent',
+                            cursor: hasClaim ? 'pointer' : 'default',
+                            borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none',
+                            transition: 'background 0.15s',
+                          }}
+                        >
                           <div style={{ fontSize: 9, color: 'var(--text-4)', fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 48 }}>
                             {label.split(' ')[0]}
                           </div>
@@ -123,18 +212,25 @@ export default function CohortDetail() {
         {/* Instructor list */}
         {instructorNames.length > 0 && (
           <div style={{ padding: '0 16px', paddingBottom: 100 }}>
-            <div className="section-label" style={{ marginBottom: 10 }}>Instructors in this cohort</div>
+            <div className="section-label" style={{ marginBottom: 10 }}>Instructors</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {instructorNames.map(name => {
                 const nameClaims = claims.filter(cl => cl.cohortId === id && cl.instructorName === name)
                 return (
                   <div key={name} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 13, color: 'var(--accent)', flexShrink: 0 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 13, color: 'var(--accent)', flexShrink: 0,
+                    }}>
                       {name[0].toUpperCase()}
                     </div>
                     <div>
                       <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{nameClaims.map(cl => `D${cl.day} S${cl.section}`).join(' · ')}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                        {nameClaims.map(cl => `D${cl.day} S${cl.section}`).join(' · ')}
+                      </div>
                     </div>
                   </div>
                 )
@@ -142,6 +238,8 @@ export default function CohortDetail() {
             </div>
           </div>
         )}
+
+        {instructorNames.length === 0 && <div style={{ paddingBottom: 100 }} />}
       </div>
 
       <BottomSheet isOpen={!!pendingUnclaim} onClose={() => setPendingUnclaim(null)} title="Remove instructor?">

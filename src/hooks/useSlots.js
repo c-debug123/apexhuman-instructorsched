@@ -17,11 +17,10 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
       for (let section = 1; section <= cohort.sections; section++) {
         for (let dayIdx = 0; dayIdx < dayCount; dayIdx++) {
           const day    = dayIdx + 1
-          const date   = addDays(cohort.startDate, dayIdx)
+          const sd     = (cohort.slotDates || [])[dayIdx]
+          const date   = sd?.date || addDays(cohort.startDate, dayIdx)
           const dayDef = courseDays[dayIdx]
           const module = dayDef?.moduleId ? modules.find(m => m.id === dayDef.moduleId) : null
-
-          // Instructor type: use module name if defined, else fallback label
           const instructorType = dayDef?.label || module?.name || `Day ${day}`
 
           const claim = claims.find(
@@ -40,8 +39,8 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
             instructorType,
             moduleId: dayDef?.moduleId || null,
             moduleName: module?.name || null,
-            startTime: dayDef?.startTime || null,
-            hoursPerDay: dayDef?.hoursPerDay || null,
+            startTime: sd?.startTime || null,
+            durationHours: module?.durationHours || null,
             claim: claim || null,
           })
         }
@@ -70,7 +69,8 @@ export function useSlotsForCohort(cohortId) {
     for (let section = 1; section <= cohort.sections; section++) {
       for (let dayIdx = 0; dayIdx < dayCount; dayIdx++) {
         const day    = dayIdx + 1
-        const date   = addDays(cohort.startDate, dayIdx)
+        const sd     = (cohort.slotDates || [])[dayIdx]
+        const date   = sd?.date || addDays(cohort.startDate, dayIdx)
         const dayDef = courseDays[dayIdx]
         const module = dayDef?.moduleId ? modules.find(m => m.id === dayDef.moduleId) : null
         const instructorType = dayDef?.label || module?.name || `Day ${day}`
@@ -87,8 +87,8 @@ export function useSlotsForCohort(cohortId) {
           instructorType,
           moduleId: dayDef?.moduleId || null,
           moduleName: module?.name || null,
-          startTime: dayDef?.startTime || null,
-          hoursPerDay: dayDef?.hoursPerDay || null,
+          startTime: sd?.startTime || null,
+          durationHours: module?.durationHours || null,
           claim: claim || null,
         })
       }
