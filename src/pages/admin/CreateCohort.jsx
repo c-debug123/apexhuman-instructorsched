@@ -2,16 +2,26 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 
-function BackIcon() {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-}
-
 const TODAY = new Date().toISOString().slice(0, 10)
 
-function formatDate(dateStr) {
+function calcEndTime(startTime, durationHours) {
+  if (!startTime || !durationHours) return ''
+  const [h, m] = startTime.split(':').map(Number)
+  const totalMins = h * 60 + m + Math.round(durationHours * 60)
+  const endH = Math.floor(totalMins / 60) % 24
+  const endM = totalMins % 60
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`
+}
+
+function formatDateShort(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function isWeekend(dateStr) {
+  if (!dateStr) return false
+  return [0, 6].includes(new Date(dateStr + 'T00:00:00').getDay())
 }
 
 export default function CreateCohort() {
@@ -21,17 +31,14 @@ export default function CreateCohort() {
   const [courseId,  setCourseId]  = useState('')
   const [sections,  setSections]  = useState(1)
   const [showMenu,  setShowMenu]  = useState(false)
-  const [slotDates, setSlotDates] = useState([])   // [{ slotIndex, date, startTime }]
+  const [slotDates, setSlotDates] = useState([])
 
   const selectedCourse = courses.find(c => c.id === courseId)
   const courseSlots    = selectedCourse?.days || []
 
-  // Re-initialise slotDates whenever course changes
   useEffect(() => {
     if (!selectedCourse) { setSlotDates([]); return }
-    setSlotDates(
-      courseSlots.map((_, i) => ({ slotIndex: i, date: '', startTime: '09:00' }))
-    )
+    setSlotDates(courseSlots.map((_, i) => ({ slotIndex: i, date: '', startTime: '09:00' })))
   }, [courseId])
 
   function setSlotField(index, field, value) {
@@ -42,221 +49,230 @@ export default function CreateCohort() {
   const canCreate   = !!courseId && allDatesSet
 
   function handleCreate() {
-    const firstDate = slotDates[0]?.date || TODAY
     addCohort({
       id: crypto.randomUUID(),
       courseId,
-      startDate: firstDate,
+      startDate: slotDates[0]?.date || TODAY,
       sections,
       slotDates,
     })
     navigate('/admin')
   }
 
+  const totalHours = courseSlots.reduce((sum, slot) => {
+    const mod = modules.find(m => m.id === slot.moduleId)
+    return sum + (mod?.durationHours || 0)
+  }, 0)
+
   return (
     <div className="admin-bg">
-      <div className="z1" style={{ padding: '0 16px', paddingBottom: 48 }}>
-        <div className="safe-top" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 8, paddingBottom: 24 }}>
-            <button className="btn btn-ghost" style={{ padding: '8px 4px', minHeight: 40 }} onClick={() => navigate('/admin')}>
-              <BackIcon />
-            </button>
-            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 18, color: 'var(--text-1)' }}>
-              Schedule a Course
-            </span>
+      <div className="z1" style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px', paddingBottom: 56 }}>
+
+        {/* Header */}
+        <div style={{ paddingTop: 'max(20px, env(safe-area-inset-top))', paddingBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => navigate('/admin')}
+            style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex', flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div>
+            <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 18, color: 'var(--text-1)', lineHeight: 1.2 }}>Schedule a Course</div>
+            <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 2 }}>Set dates and times for each module</div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* Step 1 — Course */}
-          <section>
-            <div style={sectionHeader}>Step 1 — Choose a course</div>
+          {/* Course picker */}
+          <div>
+            <div style={fieldLabel}>Course</div>
             <button
               onClick={() => setShowMenu(v => !v)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                background: 'var(--surface-sm)', border: '1px solid var(--border-md)',
-                borderRadius: 'var(--radius-sm)', padding: '14px 16px', cursor: 'pointer',
-                color: selectedCourse ? 'var(--text-1)' : 'var(--text-4)',
-                fontFamily: 'Inter', fontSize: 16, minHeight: 44,
+                background: 'var(--surface-sm)', border: `1px solid ${showMenu ? 'var(--accent)' : 'var(--border-md)'}`,
+                borderRadius: 'var(--radius-sm)', padding: '12px 14px', cursor: 'pointer',
+                transition: 'border-color 150ms',
               }}
             >
               {selectedCourse ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ width: 9, height: 9, borderRadius: '50%', background: selectedCourse.color, flexShrink: 0 }} />
-                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600 }}>{selectedCourse.name}</span>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: selectedCourse.color, flexShrink: 0 }} />
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{selectedCourse.name}</span>
+                  {totalHours > 0 && <span style={{ fontSize: 12, color: 'var(--text-4)' }}>{courseSlots.length} modules · {totalHours}h</span>}
                 </span>
-              ) : 'Select a course'}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+              ) : <span style={{ fontSize: 14, color: 'var(--text-4)' }}>Select a course…</span>}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
 
             {showMenu && (
-              <div className="card anim-slide-up" style={{ marginTop: 4, overflow: 'hidden', zIndex: 10, position: 'relative' }}>
+              <div className="card anim-slide-up" style={{ marginTop: 4, overflow: 'hidden', zIndex: 10, position: 'relative', padding: 0 }}>
                 {courses.length === 0 ? (
-                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text-3)' }}>No courses yet — build one in the Course Builder first.</div>
-                ) : courses.map(c => {
-                  const hrs = (c.days || []).reduce((sum, slot) => {
-                    const mod = modules.find(m => m.id === slot.moduleId)
-                    return sum + (mod?.durationHours || 0)
-                  }, 0)
+                  <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--text-3)' }}>No courses yet — build one first.</div>
+                ) : courses.map((c, idx) => {
+                  const hrs = (c.days || []).reduce((s, slot) => s + (modules.find(m => m.id === slot.moduleId)?.durationHours || 0), 0)
                   return (
                     <button
                       key={c.id}
                       onClick={() => { setCourseId(c.id); setShowMenu(false) }}
                       style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '13px 16px', background: courseId === c.id ? 'var(--accent-dim)' : 'transparent',
+                        padding: '11px 14px',
+                        background: courseId === c.id ? 'var(--accent-dim)' : 'transparent',
                         border: 'none', cursor: 'pointer', textAlign: 'left',
-                        borderBottom: '1px solid var(--border-dim)',
+                        borderBottom: idx < courses.length - 1 ? '1px solid var(--border-dim)' : 'none',
                       }}
                     >
-                      <span style={{ width: 9, height: 9, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
                       <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', flex: 1 }}>{c.name}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {(c.days?.length || 0)} module{(c.days?.length || 0) !== 1 ? 's' : ''}
-                        {hrs > 0 && ` · ${hrs}h`}
-                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{c.days?.length || 0}m · {hrs}h</span>
                     </button>
                   )
                 })}
               </div>
             )}
-          </section>
+          </div>
 
-          {/* Step 2 — Schedule per module */}
+          {/* Module schedule */}
+          {selectedCourse && courseSlots.length === 0 && (
+            <div style={{ padding: '12px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--amber)' }}>
+              This course has no modules — add modules in the Course Builder first.
+            </div>
+          )}
+
           {selectedCourse && courseSlots.length > 0 && (
-            <section>
-              <div style={sectionHeader}>Step 2 — Set dates &amp; times for each module</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <div style={fieldLabel}>Module Schedule</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {courseSlots.map((slot, i) => {
                   const mod       = modules.find(m => m.id === slot.moduleId)
-                  const slotState = slotDates[i] || { date: '', startTime: '09:00' }
-                  const isWeekend = slotState.date ? [0, 6].includes(new Date(slotState.date + 'T00:00:00').getDay()) : false
+                  const s         = slotDates[i] || { date: '', startTime: '09:00' }
+                  const endTime   = mod ? calcEndTime(s.startTime, mod.durationHours) : ''
+                  const weekend   = isWeekend(s.date)
 
                   return (
-                    <div key={slot.id || i} className="card" style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div
+                      key={slot.id || i}
+                      style={{
+                        background: 'var(--surface-sm)', border: '1px solid var(--border-dim)',
+                        borderRadius: 'var(--radius-sm)', padding: '12px 14px',
+                      }}
+                    >
+                      {/* Module label row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                         <div style={{
-                          width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+                          width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
                           background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 11, color: 'var(--accent)',
+                          fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10, color: 'var(--accent)',
                         }}>
                           {i + 1}
                         </div>
-                        <div>
-                          <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
-                            {slot.label || mod?.name || `Module ${i + 1}`}
-                          </div>
-                          {mod && (
-                            <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{mod.durationHours}h</div>
-                          )}
-                        </div>
+                        <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', flex: 1 }}>
+                          {slot.label || mod?.name || `Module ${i + 1}`}
+                        </span>
+                        {mod && (
+                          <span style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'Space Grotesk' }}>{mod.durationHours}h</span>
+                        )}
                       </div>
 
-                      <div style={{ display: 'flex', gap: 10 }}>
+                      {/* Date + time row */}
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                         <div style={{ flex: 1 }}>
-                          <label style={labelStyle}>Date</label>
                           <input
                             type="date"
                             className="input"
-                            value={slotState.date}
+                            value={s.date}
                             min={TODAY}
                             onChange={e => setSlotField(i, 'date', e.target.value)}
+                            style={{ fontSize: 14, padding: '9px 12px' }}
                           />
-                          {isWeekend && (
-                            <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 4 }}>Weekend — confirm intentional</div>
-                          )}
-                          {slotState.date && (
-                            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>{formatDate(slotState.date)}</div>
-                          )}
                         </div>
-                        <div style={{ width: 110 }}>
-                          <label style={labelStyle}>Start time</label>
+                        <div style={{ width: 96 }}>
                           <input
                             type="time"
                             className="input"
-                            value={slotState.startTime}
+                            value={s.startTime}
                             onChange={e => setSlotField(i, 'startTime', e.target.value)}
+                            style={{ fontSize: 14, padding: '9px 12px' }}
                           />
                         </div>
+                        {endTime && (
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            paddingBottom: 10, flexShrink: 0,
+                          }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
+                              {endTime}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Inline hints */}
+                      <div style={{ marginTop: 6, display: 'flex', gap: 10 }}>
+                        {s.date && (
+                          <span style={{ fontSize: 11, color: weekend ? 'var(--amber)' : 'var(--text-4)' }}>
+                            {formatDateShort(s.date)}{weekend ? ' · weekend' : ''}
+                          </span>
+                        )}
+                        {endTime && s.date && (
+                          <span style={{ fontSize: 11, color: 'var(--text-4)' }}>
+                            {s.startTime} – {endTime}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )
                 })}
               </div>
-            </section>
-          )}
-
-          {selectedCourse && courseSlots.length === 0 && (
-            <div className="card" style={{ padding: '14px 16px' }}>
-              <div style={{ fontSize: 13, color: 'var(--amber)' }}>
-                This course has no modules yet. Go to <strong>Courses</strong> and add modules before scheduling.
-              </div>
             </div>
           )}
 
-          {/* Step 3 — Sections */}
+          {/* Sections */}
           {selectedCourse && courseSlots.length > 0 && (
-            <section>
-              <div style={sectionHeader}>Step 3 — Sections</div>
-              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 14 }}>
-                How many groups run this course simultaneously
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--surface-sm)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-sm)' }}>
+              <div>
+                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 2 }}>Sections</div>
+                <div style={{ fontSize: 11, color: 'var(--text-4)' }}>Groups running simultaneously</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <button className="btn btn-secondary" style={{ width: 44, padding: 0, fontSize: 20 }} onClick={() => setSections(s => Math.max(1, s - 1))}>−</button>
-                <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 24, color: 'var(--text-1)', minWidth: 32, textAlign: 'center' }}>{sections}</span>
-                <button className="btn btn-secondary" style={{ width: 44, padding: 0, fontSize: 20 }} onClick={() => setSections(s => Math.min(10, s + 1))}>+</button>
-              </div>
-            </section>
-          )}
-
-          {/* Summary */}
-          {canCreate && (
-            <div className="card anim-slide-up" style={{ padding: '14px 16px' }}>
-              <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)', marginBottom: 10 }}>Schedule summary</div>
-              {slotDates.map((s, i) => {
-                const slot = courseSlots[i]
-                const mod  = modules.find(m => m.id === slot?.moduleId)
-                return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
-                      {slot?.label || mod?.name || `Module ${i + 1}`}
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'Space Grotesk' }}>
-                      {formatDate(s.date)} · {s.startTime}
-                    </span>
-                  </div>
-                )
-              })}
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-dim)', fontSize: 12, color: 'var(--text-3)' }}>
-                {sections} section{sections !== 1 ? 's' : ''} · {slotDates.length * sections} total slots
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button
+                  onClick={() => setSections(s => Math.max(1, s - 1))}
+                  style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', color: 'var(--text-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >−</button>
+                <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 18, color: 'var(--text-1)', minWidth: 20, textAlign: 'center' }}>{sections}</span>
+                <button
+                  onClick={() => setSections(s => Math.min(10, s + 1))}
+                  style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', color: 'var(--text-2)', cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >+</button>
               </div>
             </div>
           )}
 
-          <button
-            className="btn btn-primary"
-            disabled={!canCreate}
-            onClick={handleCreate}
-            style={{ width: '100%', marginTop: 4 }}
-          >
-            Create Schedule
-          </button>
+          {/* Create button */}
+          {selectedCourse && courseSlots.length > 0 && (
+            <button
+              className="btn btn-primary"
+              disabled={!canCreate}
+              onClick={handleCreate}
+              style={{ width: '100%' }}
+            >
+              {canCreate
+                ? `Create Schedule · ${courseSlots.length} modules, ${sections} section${sections !== 1 ? 's' : ''}`
+                : 'Set a date for each module to continue'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-const labelStyle = {
-  display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)',
-  marginBottom: 6, fontFamily: 'Space Grotesk', textTransform: 'uppercase', letterSpacing: '0.08em',
-}
-
-const sectionHeader = {
-  fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 12,
-  textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)',
-  marginBottom: 12,
+const fieldLabel = {
+  fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600,
+  textTransform: 'uppercase', letterSpacing: '0.08em',
+  color: 'var(--text-4)', marginBottom: 8,
 }
