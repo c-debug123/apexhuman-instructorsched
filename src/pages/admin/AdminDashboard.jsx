@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { addDays, formatDateShort } from '../../data/courses'
@@ -66,9 +66,10 @@ function SetupStep({ number, label, sublabel, count, onClick, locked, cta }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const { cohorts, courses, modules, claims, resetAll } = useApp()
-  const [showReset, setShowReset] = useState(false)
-  const [copied, setCopied]       = useState(false)
+  const { cohorts, courses, modules, claims, resetAll, deleteCohort } = useApp()
+  const [showReset, setShowReset]       = useState(false)
+  const [copied, setCopied]             = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   function copyInstructorLink() {
     navigator.clipboard.writeText(INSTRUCTOR_URL).then(() => {
@@ -243,6 +244,8 @@ export default function AdminDashboard() {
                 courses={courses}
                 claims={claims}
                 onClick={() => navigate(`/admin/cohorts/${cohort.id}`)}
+                onEdit={() => navigate(`/admin/cohorts/${cohort.id}`)}
+                onDelete={() => setDeleteTarget(cohort)}
               />
             ))
           )}
@@ -265,6 +268,18 @@ export default function AdminDashboard() {
         </button>
       )}
 
+      <BottomSheet isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete schedule?">
+        <div>
+          <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
+            This will permanently remove this cohort and all associated instructor claims. This cannot be undone.
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => { deleteCohort(deleteTarget.id); setDeleteTarget(null) }}>Delete</button>
+            <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setDeleteTarget(null)}>Cancel</button>
+          </div>
+        </div>
+      </BottomSheet>
+
       <BottomSheet isOpen={showReset} onClose={() => setShowReset(false)} title="Reset all data?">
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
@@ -283,9 +298,18 @@ export default function AdminDashboard() {
   )
 }
 
-function CohortCard({ cohort, courses, claims, onClick }) {
+const ACTION_W = 76
+
+function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
   const course = courses.find(c => c.id === cohort.courseId)
+  const [offset, setOffset]   = useState(0)
+  const [snapped, setSnapped] = useState(null) // null | 'left' | 'right'
+  const [animating, setAnimating] = useState(false)
+  const startXRef  = useRef(null)
+  const baseRef    = useRef(0)
+
   if (!course) return null
+
   const slots    = cohort.slotDates?.length > 0 ? cohort.slotDates : []
   const dayCount = course.days?.length || 0
   const firstDate = slots[0]?.date || cohort.startDate
@@ -295,51 +319,130 @@ function CohortCard({ cohort, courses, claims, onClick }) {
   const pct      = total > 0 ? (filled / total) * 100 : 0
   const barColor = pct === 100 ? 'var(--green)' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
 
+  function snapTo(target) {
+    setAnimating(true)
+    setOffset(target)
+    setSnapped(target === 0 ? null : target < 0 ? 'left' : 'right')
+    setTimeout(() => setAnimating(false), 250)
+  }
+
+  function handleTouchStart(e) {
+    startXRef.current = e.touches[0].clientX
+    baseRef.current   = snapped === 'left' ? -ACTION_W : snapped === 'right' ? ACTION_W : 0
+    setAnimating(false)
+  }
+
+  function handleTouchMove(e) {
+    if (startXRef.current === null) return
+    const dx  = e.touches[0].clientX - startXRef.current
+    const raw = baseRef.current + dx
+    setOffset(Math.max(-ACTION_W, Math.min(ACTION_W, raw)))
+  }
+
+  function handleTouchEnd() {
+    if (startXRef.current === null) return
+    startXRef.current = null
+    const moved = offset - baseRef.current
+    if (moved < -36)      snapTo(-ACTION_W)
+    else if (moved > 36)  snapTo(ACTION_W)
+    else if (offset < -ACTION_W / 2) snapTo(-ACTION_W)
+    else if (offset > ACTION_W / 2)  snapTo(ACTION_W)
+    else                  snapTo(0)
+  }
+
+  function handleCardClick() {
+    if (snapped) { snapTo(0); return }
+    onClick()
+  }
+
   return (
-    <button
-      className="card card-hover"
-      onClick={onClick}
-      style={{ padding: 0, overflow: 'hidden', textAlign: 'left', width: '100%', cursor: 'pointer', background: 'var(--surface-sm)' }}
-    >
-      <div style={{ display: 'flex' }}>
-        <div style={{ width: 4, background: course.color, flexShrink: 0 }} />
-        <div style={{ flex: 1, padding: '14px 14px 12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <CourseBadge courseId={cohort.courseId} size="sm" />
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-              {cohort.sections} section{cohort.sections !== 1 ? 's' : ''}
-            </span>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
-            {formatDateShort(firstDate)} – {formatDateShort(lastDate)}
-            {dayCount > 0 && <> · {dayCount} module{dayCount !== 1 ? 's' : ''}</>}
-          </div>
+    <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+      {/* Edit action — revealed on right-swipe */}
+      <div style={{
+        position: 'absolute', left: 0, top: 0, bottom: 0, width: ACTION_W,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(124,106,247,0.18)',
+        flexDirection: 'column', gap: 4,
+        cursor: 'pointer',
+      }} onClick={onEdit}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.05em' }}>EDIT</span>
+      </div>
 
-          <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
-            {Array.from({ length: cohort.sections }, (_, si) =>
-              Array.from({ length: dayCount }, (_, di) => {
-                const taken = claims.some(cl => cl.cohortId === cohort.id && cl.day === di + 1 && cl.section === si + 1)
-                return (
-                  <div key={`${si}-${di}`} style={{
-                    width: 8, height: 8, borderRadius: '50%',
-                    background: taken ? 'var(--green)' : 'var(--surface-lg)',
-                    border: taken ? 'none' : '1px solid var(--border-md)',
-                  }} />
-                )
-              })
-            )}
-          </div>
+      {/* Delete action — revealed on left-swipe */}
+      <div style={{
+        position: 'absolute', right: 0, top: 0, bottom: 0, width: ACTION_W,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(239,68,68,0.18)',
+        flexDirection: 'column', gap: 4,
+        cursor: 'pointer',
+      }} onClick={onDelete}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+        </svg>
+        <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--red)', letterSpacing: '0.05em' }}>DELETE</span>
+      </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div className="progress-track" style={{ flex: 1 }}>
-              <div className="progress-fill" style={{ width: `${pct}%`, background: barColor }} />
+      {/* Card */}
+      <button
+        className="card card-hover"
+        onClick={handleCardClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          padding: 0, overflow: 'hidden', textAlign: 'left', width: '100%',
+          cursor: 'pointer', background: 'var(--surface-sm)',
+          transform: `translateX(${offset}px)`,
+          transition: animating ? 'transform 220ms cubic-bezier(0.25,1,0.5,1)' : 'none',
+          position: 'relative', zIndex: 1,
+          borderRadius: 'var(--radius-lg)',
+        }}
+      >
+        <div style={{ display: 'flex' }}>
+          <div style={{ width: 4, background: course.color, flexShrink: 0 }} />
+          <div style={{ flex: 1, padding: '14px 14px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <CourseBadge courseId={cohort.courseId} size="sm" />
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                {cohort.sections} section{cohort.sections !== 1 ? 's' : ''}
+              </span>
             </div>
-            <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Space Grotesk', fontWeight: 600, whiteSpace: 'nowrap' }}>
-              {filled}/{total}
-            </span>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+              {formatDateShort(firstDate)} – {formatDateShort(lastDate)}
+              {dayCount > 0 && <> · {dayCount} module{dayCount !== 1 ? 's' : ''}</>}
+            </div>
+
+            <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
+              {Array.from({ length: cohort.sections }, (_, si) =>
+                Array.from({ length: dayCount }, (_, di) => {
+                  const taken = claims.some(cl => cl.cohortId === cohort.id && cl.day === di + 1 && cl.section === si + 1)
+                  return (
+                    <div key={`${si}-${di}`} style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: taken ? 'var(--green)' : 'var(--surface-lg)',
+                      border: taken ? 'none' : '1px solid var(--border-md)',
+                    }} />
+                  )
+                })
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="progress-track" style={{ flex: 1 }}>
+                <div className="progress-fill" style={{ width: `${pct}%`, background: barColor }} />
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Space Grotesk', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {filled}/{total}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </div>
   )
 }
