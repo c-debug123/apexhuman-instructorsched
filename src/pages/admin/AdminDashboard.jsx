@@ -206,9 +206,9 @@ export default function AdminDashboard() {
               number={3}
               label="Schedule a Course"
               sublabel={n => `${n} schedule${n !== 1 ? 's' : ''} active`}
-              cta={hasCourses ? 'Set dates and times for each module' : 'Build a course first'}
+              cta={!hasModules ? 'Create modules first' : !hasCourses ? 'Build a course first' : 'Set dates and times for each module'}
               count={cohorts.length}
-              locked={!hasCourses}
+              locked={!hasModules || !hasCourses}
               onClick={() => navigate('/admin/cohorts/new')}
             />
           </div>
@@ -228,9 +228,17 @@ export default function AdminDashboard() {
               </div>
               <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-2)', marginBottom: 6 }}>No schedules yet</div>
               <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>
-                {hasCourses ? 'Complete step 3 above to schedule your first course.' : 'Complete the setup steps above to get started.'}
+                {!hasModules ? 'Start by creating your teaching modules above.' : !hasCourses ? 'Then build a course from your modules.' : 'Complete step 3 above to schedule your first course.'}
               </div>
-              {hasCourses && (
+              {!hasModules ? (
+                <button className="btn btn-primary" style={{ margin: '0 auto' }} onClick={() => navigate('/admin/modules')}>
+                  <PlusIcon /> Create Modules
+                </button>
+              ) : !hasCourses ? (
+                <button className="btn btn-primary" style={{ margin: '0 auto' }} onClick={() => navigate('/admin/courses')}>
+                  <PlusIcon /> Build a Course
+                </button>
+              ) : (
                 <button className="btn btn-primary" style={{ margin: '0 auto' }} onClick={() => navigate('/admin/cohorts/new')}>
                   <PlusIcon /> Schedule a Course
                 </button>
