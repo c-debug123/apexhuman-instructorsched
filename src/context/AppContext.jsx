@@ -8,7 +8,7 @@ function toModule(r)  { return { id: r.id, name: r.name, description: r.descript
 function toCourse(r)  { return { id: r.id, code: r.code, name: r.name, fullTitle: r.full_title, shortName: r.short_name, color: r.color, num: r.num, track: r.track, days: r.days || [], groups: r.groups || [], createdAt: r.created_at } }
 function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, slotDates: r.slot_dates || [], createdAt: r.created_at } }
 function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, eligibleGroups: r.eligible_groups || [], createdAt: r.created_at } }
-function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, courseId: r.course_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
+function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
 
 
@@ -154,7 +154,7 @@ export function AppProvider({ children }) {
   const addClaim = useCallback(async (cl) => {
     // Optimistic update — show immediately, roll back on failure
     setClaims(prev => [...prev, cl])
-    const row = { id: cl.id, cohort_id: cl.cohortId, course_id: cl.courseId || null, day: cl.day, section: cl.section, date: cl.date || null, instructor_type: cl.instructorType || null, instructor_id: cl.instructorId || null, instructor_name: cl.instructorName }
+    const row = { id: cl.id, cohort_id: cl.cohortId, day: cl.day, section: cl.section, date: cl.date || null, instructor_type: cl.instructorType || null, instructor_id: cl.instructorId || null, instructor_name: cl.instructorName }
     const { data, error } = await supabase.from('claims').insert(row).select().single()
     if (error) {
       console.error('addClaim failed:', error)

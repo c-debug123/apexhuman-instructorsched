@@ -76,7 +76,7 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
 export default function InstructorDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { instructors, modules, courses, claims, updateInstructor, deleteInstructor } = useApp()
+  const { instructors, modules, courses, cohorts, claims, updateInstructor, deleteInstructor } = useApp()
 
   const [showEdit, setShowEdit]       = useState(false)
   const [showDelete, setShowDelete]   = useState(false)
@@ -202,7 +202,8 @@ export default function InstructorDetail() {
                     </div>
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                       {upcoming.map((cl, i) => {
-                        const course = courses.find(c => c.id === cl.courseId)
+                        const cohort = cohorts.find(ch => ch.id === cl.cohortId)
+                        const course = courses.find(c => c.id === cohort?.courseId)
                         return (
                           <div key={cl.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderBottom: i < upcoming.length - 1 ? '1px solid var(--border-dim)' : 'none' }}>
                             {course && <div style={{ width: 3, height: 32, borderRadius: 2, background: course.color, flexShrink: 0 }} />}
@@ -230,7 +231,8 @@ export default function InstructorDetail() {
                     </div>
                     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                       {past.map((cl, i) => {
-                        const course = courses.find(c => c.id === cl.courseId)
+                        const cohort = cohorts.find(ch => ch.id === cl.cohortId)
+                        const course = courses.find(c => c.id === cohort?.courseId)
                         return (
                           <div key={cl.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderBottom: i < past.length - 1 ? '1px solid var(--border-dim)' : 'none', opacity: 0.7 }}>
                             {course && <div style={{ width: 3, height: 32, borderRadius: 2, background: course.color, flexShrink: 0 }} />}
