@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
-import { COURSES, addDays, formatDate } from '../../data/courses'
+import { addDays, formatDate } from '../../data/courses'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import InstructorNameChip from '../../components/InstructorNameChip'
@@ -28,7 +28,7 @@ function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function getDayData(dateStr, cohorts, claims, myName) {
+function getDayData(dateStr, cohorts, claims, myName, courses) {
   let mySlots = []
   let openSlots = []
   cohorts.forEach(cohort => {
@@ -37,12 +37,13 @@ function getDayData(dateStr, cohorts, claims, myName) {
     const diff = Math.round((d - d0) / 86400000)
     if (diff < 0 || diff > 4) return
     const day = diff + 1
+    const course = courses.find(c => c.id === cohort.courseId)
     for (let section = 1; section <= cohort.sections; section++) {
       const claim = claims.find(cl => cl.cohortId === cohort.id && cl.day === day && cl.section === section)
       if (claim) {
-        if (claim.instructorName === myName) mySlots.push({ cohort, day, section, claim, course: COURSES[cohort.courseId] })
+        if (claim.instructorName === myName) mySlots.push({ cohort, day, section, claim, course })
       } else {
-        openSlots.push({ cohort, day, section, course: COURSES[cohort.courseId] })
+        openSlots.push({ cohort, day, section, course })
       }
     }
   })
@@ -51,7 +52,7 @@ function getDayData(dateStr, cohorts, claims, myName) {
 
 export default function InstructorCalendarView() {
   const navigate = useNavigate()
-  const { cohorts, claims, removeClaim, addClaim } = useApp()
+  const { cohorts, claims, courses, removeClaim, addClaim } = useApp()
   const name = localStorage.getItem('apex_instructor_name') || ''
 
   const today = new Date()
@@ -83,7 +84,7 @@ export default function InstructorCalendarView() {
       else if (offset >= daysInMonth) { date = new Date(year, month + 1, offset - daysInMonth + 1); inMonth = false }
       else { date = new Date(year, month, offset + 1); inMonth = true }
       const dateStr = toDateStr(date)
-      const { mySlots, openSlots } = getDayData(dateStr, cohorts, claims, name)
+      const { mySlots, openSlots } = getDayData(dateStr, cohorts, claims, name, courses)
       grid.push({ date, dateStr, inMonth, mySlots, openSlots })
     }
     return grid
@@ -99,7 +100,7 @@ export default function InstructorCalendarView() {
     })
   }, [monthDate, cohorts, claims, name])
 
-  const selectedData = selectedDay ? getDayData(selectedDay, cohorts, claims, name) : { mySlots: [], openSlots: [] }
+  const selectedData = selectedDay ? getDayData(selectedDay, cohorts, claims, name, courses) : { mySlots: [], openSlots: [] }
   const selectedDateLabel = selectedDay
     ? new Date(selectedDay + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : ''
