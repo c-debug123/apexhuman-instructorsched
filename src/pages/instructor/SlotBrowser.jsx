@@ -15,6 +15,7 @@ export default function SlotBrowser() {
   const [courseFilter, setCourseFilter]       = useState(null)
   const [eligibleOnly, setEligibleOnly]       = useState(false)
   const [myBookingsOnly, setMyBookingsOnly]   = useState(false)
+  const [showCoursePicker, setShowCoursePicker] = useState(false)
   const [pendingClaim, setPendingClaim]       = useState(null)
   const [conflictSlot, setConflictSlot]       = useState(null)
   const [pendingUnclaim, setPendingUnclaim]   = useState(null)
@@ -100,29 +101,26 @@ export default function SlotBrowser() {
               </div>
             </div>
 
-            {/* Course filter dropdown */}
-            {courses.length > 0 && (
-              <div style={{ marginBottom: 8 }}>
-                <select
-                  value={courseFilter || ''}
-                  onChange={e => setCourseFilter(e.target.value || null)}
-                  style={{
-                    width: '100%', height: 36, padding: '0 10px', boxSizing: 'border-box',
-                    background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
-                    borderRadius: 'var(--radius-md)', color: courseFilter ? 'var(--text-1)' : 'var(--text-3)',
-                    outline: 'none', WebkitAppearance: 'none', appearance: 'none',
-                  }}
+            {/* Filters */}
+            <div style={{ display: 'flex', gap: 6, paddingBottom: 4, flexWrap: 'wrap' }}>
+              <button
+                className={`filter-pill ${!courseFilter && !eligibleOnly && !myBookingsOnly ? 'on-instructor' : ''}`}
+                onClick={() => { setCourseFilter(null); setEligibleOnly(false); setMyBookingsOnly(false) }}
+              >
+                All
+              </button>
+              {courses.length > 0 && (
+                <button
+                  className={`filter-pill ${courseFilter ? 'on-instructor' : ''}`}
+                  onClick={() => setShowCoursePicker(true)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5 }}
                 >
-                  <option value=''>All courses</option>
-                  {courses.map(c => (
-                    <option key={c.id} value={c.id}>{c.code}{c.shortName ? `: ${c.shortName}` : c.name ? `: ${c.name}` : ''}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Slot filters */}
-            <div style={{ display: 'flex', gap: 6, paddingBottom: 4 }}>
+                  {courseFilter
+                    ? (() => { const c = courses.find(x => x.id === courseFilter); return <><span style={{ width: 6, height: 6, borderRadius: '50%', background: c?.color, display: 'inline-block' }} />{c?.code}{c?.shortName ? `: ${c.shortName}` : ''}</> })()
+                    : 'Course'}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+              )}
               <button
                 className={`filter-pill ${eligibleOnly ? 'on-instructor' : ''}`}
                 onClick={() => setEligibleOnly(v => !v)}
@@ -231,6 +229,34 @@ export default function SlotBrowser() {
             </div>
           </div>
         )}
+      </BottomSheet>
+
+      {/* Course picker */}
+      <BottomSheet isOpen={showCoursePicker} onClose={() => setShowCoursePicker(false)} title="Filter by Course">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {[{ id: null, code: 'All', name: 'All courses', color: null }].concat(courses).map(c => {
+            const isSelected = courseFilter === c.id
+            return (
+              <button
+                key={c.id ?? 'all'}
+                onClick={() => { setCourseFilter(c.id); setShowCoursePicker(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '12px 4px',
+                  background: 'none', border: 'none', borderBottom: '1px solid var(--border-dim)',
+                  cursor: 'pointer', textAlign: 'left', width: '100%',
+                }}
+              >
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: c.color || 'var(--border-md)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: isSelected ? 'var(--teal)' : 'var(--text-1)' }}>
+                  {c.id ? `${c.code}${c.shortName ? `: ${c.shortName}` : c.name ? `: ${c.name}` : ''}` : 'All courses'}
+                </span>
+                {isSelected && (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
       </BottomSheet>
 
       <BottomNav role="instructor" />
