@@ -57,7 +57,7 @@ export function AppProvider({ children }) {
         setNotifications(prev => prev.map(n => n.id === r.id ? toNotif(r) : n))
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'cohorts' }, ({ new: r }) => {
-        setCohorts(prev => [...prev, toCohort(r)])
+        setCohorts(prev => { if (prev.find(c => c.id === r.id)) return prev; return [...prev, toCohort(r)] })
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'cohorts' }, ({ old: r }) => {
         setCohorts(prev => prev.filter(c => c.id !== r.id))
