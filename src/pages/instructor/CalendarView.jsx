@@ -322,14 +322,18 @@ export default function InstructorCalendarView() {
                         <div style={{ width: 4, background: s.course?.color, flexShrink: 0 }} />
                         <div style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
-                            <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 2 }}>
+                            <div style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
                               {s.course ? `${s.course.code}: ${s.course.name}` : s.cohort.courseId}
                             </div>
+                            {s.moduleName && (
+                              <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 14, color: 'var(--text-1)', marginBottom: 3 }}>
+                                {s.moduleName}
+                              </div>
+                            )}
                             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                              Module {s.day} of {s.totalDays} · Section {s.section}
+                              M{s.day} of {s.totalDays} · Sec {s.section}
                               {s.startTime && <span style={{ marginLeft: 6, color: 'var(--teal)' }}>{s.startTime}</span>}
                             </div>
-                            {s.moduleName && <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{s.moduleName}</div>}
                           </div>
                           <button
                             onClick={() => setPendingUnclaim(s)}
@@ -359,14 +363,18 @@ export default function InstructorCalendarView() {
                         <div style={{ width: 4, background: s.course?.color, flexShrink: 0 }} />
                         <div style={{ flex: 1, padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div>
-                            <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 2 }}>
+                            <div style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
                               {s.course ? `${s.course.code}: ${s.course.name}` : s.cohort.courseId}
                             </div>
+                            {s.moduleName && (
+                              <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 14, color: 'var(--text-1)', marginBottom: 3 }}>
+                                {s.moduleName}
+                              </div>
+                            )}
                             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                              Module {s.day} of {s.totalDays} · Section {s.section}
+                              M{s.day} of {s.totalDays} · Sec {s.section}
                               {s.startTime && <span style={{ marginLeft: 6, color: 'var(--teal)' }}>{s.startTime}</span>}
                             </div>
-                            {s.moduleName && <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{s.moduleName}</div>}
                           </div>
                           <button
                             onClick={() => setPendingClaim({ ...s, dateStr: selectedDay })}

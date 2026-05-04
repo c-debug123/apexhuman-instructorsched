@@ -57,36 +57,36 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+        {/* Row 1: course badge + position */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: slot.moduleName ? 3 : 4, flexWrap: 'wrap' }}>
           <CourseBadge courseId={slot.courseId} size="sm" />
           <span style={{
             fontFamily: 'Space Grotesk', fontSize: 10, fontWeight: 600,
-            textTransform: 'uppercase', letterSpacing: '0.08em',
-            color: 'var(--text-3)',
+            textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)',
           }}>
             M{slot.day} · Sec {slot.section}/{slot.sections}
           </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{formatDate(slot.date)}</span>
-          {slot.moduleName && (
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{slot.moduleName}</span>
-          )}
-        </div>
-        {slot.moduleTags?.length > 0 && (
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
-            {slot.moduleTags.map(tag => (
-              <span key={tag} style={{
-                fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600,
-                textTransform: 'uppercase', letterSpacing: '0.05em',
-                background: 'rgba(124,106,247,0.12)', border: '1px solid rgba(124,106,247,0.25)',
-                borderRadius: 'var(--radius-full)', padding: '2px 7px', color: 'var(--purple, #7c6af7)',
-              }}>
-                {tag}
-              </span>
-            ))}
+        {/* Row 2: module name — prominent */}
+        {slot.moduleName && (
+          <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 3 }}>
+            {slot.moduleName}
           </div>
         )}
+        {/* Row 3: date + tags */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{formatDate(slot.date)}</span>
+          {slot.moduleTags?.map(tag => (
+            <span key={tag} style={{
+              fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600,
+              textTransform: 'uppercase', letterSpacing: '0.05em',
+              background: 'rgba(124,106,247,0.12)', border: '1px solid rgba(124,106,247,0.25)',
+              borderRadius: 'var(--radius-full)', padding: '2px 7px', color: 'var(--purple, #7c6af7)',
+            }}>
+              {tag}
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* Action */}
