@@ -12,10 +12,12 @@ export default function SlotBrowser() {
   const name        = localStorage.getItem('apex_instructor_name') || ''
   const instructorId = localStorage.getItem('apex_instructor_id') || null
 
-  const [courseFilter, setCourseFilter] = useState(null)
-  const [pendingClaim, setPendingClaim] = useState(null)
-  const [conflictSlot, setConflictSlot] = useState(null)
-  const [pendingUnclaim, setPendingUnclaim] = useState(null)
+  const [courseFilter, setCourseFilter]       = useState(null)
+  const [eligibleOnly, setEligibleOnly]       = useState(false)
+  const [myBookingsOnly, setMyBookingsOnly]   = useState(false)
+  const [pendingClaim, setPendingClaim]       = useState(null)
+  const [conflictSlot, setConflictSlot]       = useState(null)
+  const [pendingUnclaim, setPendingUnclaim]   = useState(null)
 
   const slots = useSlots({ courseFilter })
 
@@ -71,8 +73,13 @@ export default function SlotBrowser() {
     setPendingUnclaim(null)
   }
 
-  // Group by date
-  const grouped = slots.reduce((acc, slot) => {
+  // Group by date — apply eligible/mine filters after eligibility is known
+  const filteredSlots = slots.filter(slot => {
+    if (eligibleOnly && !isEligible(slot)) return false
+    if (myBookingsOnly && slot.claim?.instructorName !== name) return false
+    return true
+  })
+  const grouped = filteredSlots.reduce((acc, slot) => {
     if (!acc[slot.date]) acc[slot.date] = []
     acc[slot.date].push(slot)
     return acc
@@ -95,7 +102,7 @@ export default function SlotBrowser() {
 
             {/* Course filter dropdown */}
             {courses.length > 0 && (
-              <div style={{ paddingBottom: 8 }}>
+              <div style={{ marginBottom: 8 }}>
                 <select
                   value={courseFilter || ''}
                   onChange={e => setCourseFilter(e.target.value || null)}
@@ -103,8 +110,7 @@ export default function SlotBrowser() {
                     width: '100%', height: 36, padding: '0 10px', boxSizing: 'border-box',
                     background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
                     borderRadius: 'var(--radius-md)', color: courseFilter ? 'var(--text-1)' : 'var(--text-3)',
-                    fontFamily: 'Inter, sans-serif', fontSize: 13, outline: 'none',
-                    WebkitAppearance: 'none', appearance: 'none',
+                    outline: 'none', WebkitAppearance: 'none', appearance: 'none',
                   }}
                 >
                   <option value=''>All courses</option>
@@ -114,6 +120,22 @@ export default function SlotBrowser() {
                 </select>
               </div>
             )}
+
+            {/* Slot filters */}
+            <div style={{ display: 'flex', gap: 6, paddingBottom: 4 }}>
+              <button
+                className={`filter-pill ${eligibleOnly ? 'on-instructor' : ''}`}
+                onClick={() => setEligibleOnly(v => !v)}
+              >
+                Eligible only
+              </button>
+              <button
+                className={`filter-pill ${myBookingsOnly ? 'on-instructor' : ''}`}
+                onClick={() => setMyBookingsOnly(v => !v)}
+              >
+                My bookings
+              </button>
+            </div>
           </div>
         </div>
 
@@ -121,13 +143,13 @@ export default function SlotBrowser() {
           {dates.length === 0 ? (
             <div className="card" style={{ padding: 40, textAlign: 'center' }}>
               <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-2)', marginBottom: 6 }}>
-                {courseFilter ? 'No slots match your filter.' : 'No open slots right now.'}
+                {(courseFilter || eligibleOnly || myBookingsOnly) ? 'No slots match your filters.' : 'No open slots right now.'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: courseFilter ? 16 : 0 }}>
-                {courseFilter ? 'Try clearing the filter to see more.' : 'Check back later.'}
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: (courseFilter || eligibleOnly || myBookingsOnly) ? 16 : 0 }}>
+                {(courseFilter || eligibleOnly || myBookingsOnly) ? 'Try adjusting your filters.' : 'Check back later.'}
               </div>
-              {courseFilter && (
-                <button className="btn btn-ghost" onClick={() => setCourseFilter(null)}>Clear Filter</button>
+              {(courseFilter || eligibleOnly || myBookingsOnly) && (
+                <button className="btn btn-ghost" onClick={() => { setCourseFilter(null); setEligibleOnly(false); setMyBookingsOnly(false) }}>Clear Filters</button>
               )}
             </div>
           ) : (
