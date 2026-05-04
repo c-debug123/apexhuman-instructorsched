@@ -30,6 +30,21 @@ function toMins(timeStr) {
   return h * 60 + m
 }
 
+function getPrecedenceErrors(slotDates, courseSlots, modules) {
+  const errors = new Set()
+  for (let i = 1; i < slotDates.length; i++) {
+    const prev = slotDates[i - 1]
+    const curr = slotDates[i]
+    if (!prev?.date || !prev?.startTime || !curr?.date || !curr?.startTime) continue
+    const prevMod = modules.find(m => m.id === courseSlots[i - 1]?.moduleId)
+    const prevEnd = new Date(`${prev.date}T${prev.startTime}`)
+    prevEnd.setMinutes(prevEnd.getMinutes() + Math.round((prevMod?.durationHours || 1) * 60))
+    const currStart = new Date(`${curr.date}T${curr.startTime}`)
+    if (currStart < prevEnd) errors.add(i)
+  }
+  return errors
+}
+
 function getOverlapIndices(slotDates, courseSlots, modules) {
   const conflicting = new Set()
   for (let i = 0; i < slotDates.length; i++) {
@@ -53,9 +68,50 @@ function getOverlapIndices(slotDates, courseSlots, modules) {
   return conflicting
 }
 
+const HOURS   = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
+
+function MilitaryTimePicker({ value, onChange }) {
+  const [hh, mm] = value ? value.split(':') : ['09', '00']
+  function update(newH, newM) { onChange(`${newH}:${newM}`) }
+  const selStyle = {
+    background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
+    borderRadius: 'var(--radius-md)', color: 'var(--text-1)',
+    fontSize: 14, fontFamily: 'Space Grotesk', fontWeight: 600,
+    padding: '9px 6px', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%' }}>
+      <select value={hh} onChange={e => update(e.target.value, mm)} style={{ ...selStyle, width: 52 }}>
+        {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+      </select>
+      <span style={{ color: 'var(--text-3)', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 14 }}>:</span>
+      <select value={mm} onChange={e => update(hh, e.target.value)} style={{ ...selStyle, width: 52 }}>
+        {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function findDuplicateCohort(cohorts, courseId, slotDates) {
+  if (!courseId || !slotDates.some(s => s.date)) return null
+  const newDates = slotDates.map(s => s.date).filter(Boolean)
+  if (newDates.length === 0) return null
+  const newFirst = newDates[0]
+  const newLast  = newDates[newDates.length - 1]
+  return cohorts.find(c => {
+    if (c.courseId !== courseId) return false
+    const existing = c.slotDates?.map(s => s.date).filter(Boolean) || []
+    if (existing.length === 0) return false
+    const exFirst = existing[0]
+    const exLast  = existing[existing.length - 1]
+    return exFirst <= newLast && exLast >= newFirst
+  }) || null
+}
+
 export default function CreateCohort() {
   const navigate = useNavigate()
-  const { courses, modules, addCohort } = useApp()
+  const { courses, modules, cohorts, addCohort } = useApp()
 
   const [courseId,  setCourseId]  = useState('')
   const [sections,  setSections]  = useState(1)
@@ -67,17 +123,28 @@ export default function CreateCohort() {
 
   useEffect(() => {
     if (!selectedCourse) { setSlotDates([]); return }
-    setSlotDates(courseSlots.map((_, i) => ({ slotIndex: i, date: '', startTime: '09:00' })))
+    setSlotDates(courseSlots.map((_, i) => ({ slotIndex: i, date: '', startTime: '09:00', room: '', address: '' })))
   }, [courseId])
 
   function setSlotField(index, field, value) {
     setSlotDates(prev => prev.map((s, i) => i === index ? { ...s, [field]: value } : s))
   }
 
-  const overlapIndices = getOverlapIndices(slotDates, courseSlots, modules)
-  const hasOverlap     = overlapIndices.size > 0
-  const allDatesSet    = slotDates.length > 0 && slotDates.every(s => !!s.date)
-  const canCreate      = !!courseId && allDatesSet && !hasOverlap
+  function setVenueField(index, field, value) {
+    setSlotDates(prev => prev.map((s, i) => {
+      if (i === index) return { ...s, [field]: value }
+      if (i > index && !s[field]) return { ...s, [field]: value }
+      return s
+    }))
+  }
+
+  const overlapIndices     = getOverlapIndices(slotDates, courseSlots, modules)
+  const precedenceErrors   = getPrecedenceErrors(slotDates, courseSlots, modules)
+  const duplicateCohort    = findDuplicateCohort(cohorts, courseId, slotDates)
+  const hasOverlap         = overlapIndices.size > 0
+  const hasPrecedenceError = precedenceErrors.size > 0
+  const allDatesSet        = slotDates.length > 0 && slotDates.every(s => !!s.date)
+  const canCreate          = !!courseId && allDatesSet && !hasOverlap && !hasPrecedenceError && !duplicateCohort
 
   function handleCreate() {
     addCohort({
@@ -130,7 +197,7 @@ export default function CreateCohort() {
               {selectedCourse ? (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: selectedCourse.color, flexShrink: 0 }} />
-                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{selectedCourse.name}</span>
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{selectedCourse.code}: {selectedCourse.name}</span>
                   {totalHours > 0 && <span style={{ fontSize: 12, color: 'var(--text-4)' }}>{courseSlots.length} modules · {totalHours}h</span>}
                 </span>
               ) : <span style={{ fontSize: 14, color: 'var(--text-4)' }}>Select a course…</span>}
@@ -156,7 +223,7 @@ export default function CreateCohort() {
                       }}
                     >
                       <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                      <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', flex: 1 }}>{c.name}</span>
+                      <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', flex: 1 }}>{c.code}: {c.name}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{c.days?.length || 0}m · {hrs}h</span>
                     </button>
                   )
@@ -164,6 +231,16 @@ export default function CreateCohort() {
               </div>
             )}
           </div>
+
+          {/* Duplicate warning */}
+          {duplicateCohort && (
+            <div style={{ padding: '12px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>
+                A schedule for this course already exists with overlapping dates. Delete the existing one first, or choose different dates.
+              </span>
+            </div>
+          )}
 
           {/* Module schedule */}
           {selectedCourse && courseSlots.length === 0 && (
@@ -181,14 +258,28 @@ export default function CreateCohort() {
                   const s         = slotDates[i] || { date: '', startTime: '09:00' }
                   const endTime   = mod ? calcEndTime(s.startTime, mod.durationHours) : ''
                   const weekend   = isWeekend(s.date)
-                  const hasConflict = overlapIndices.has(i)
+                  const hasConflict   = overlapIndices.has(i)
+                  const hasPrecedence = precedenceErrors.has(i)
+                  const hasError      = hasConflict || hasPrecedence
+
+                  // For precedence error, compute what the previous slot's end time is
+                  let precedenceMsg = ''
+                  if (hasPrecedence) {
+                    const prev    = slotDates[i - 1]
+                    const prevMod = modules.find(m => m.id === courseSlots[i - 1]?.moduleId)
+                    const prevEndTime = calcEndTime(prev.startTime, prevMod?.durationHours || 1)
+                    const isSameDate  = prev.date === slotDates[i].date
+                    precedenceMsg = isSameDate
+                      ? `Must start at ${prevEndTime} or later (after Module ${i} ends)`
+                      : `Must be on ${formatDateShort(prev.date)} at ${prevEndTime} or later`
+                  }
 
                   return (
                     <div
                       key={slot.id || i}
                       style={{
                         background: 'var(--surface-sm)',
-                        border: `1px solid ${hasConflict ? 'var(--red)' : 'var(--border-dim)'}`,
+                        border: `1px solid ${hasError ? 'var(--red)' : 'var(--border-dim)'}`,
                         borderRadius: 'var(--radius-sm)', padding: '12px 14px',
                         transition: 'border-color 150ms',
                       }}
@@ -223,13 +314,10 @@ export default function CreateCohort() {
                             style={{ fontSize: 14, padding: '9px 12px' }}
                           />
                         </div>
-                        <div style={{ width: 96 }}>
-                          <input
-                            type="time"
-                            className="input"
-                            value={s.startTime}
-                            onChange={e => setSlotField(i, 'startTime', e.target.value)}
-                            style={{ fontSize: 14, padding: '9px 12px' }}
+                        <div>
+                          <MilitaryTimePicker
+                            value={s.startTime || '09:00'}
+                            onChange={v => setSlotField(i, 'startTime', v)}
                           />
                         </div>
                         {endTime && (
@@ -258,10 +346,36 @@ export default function CreateCohort() {
                           </span>
                         )}
                       </div>
+
+                      {/* Venue */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                        <input
+                          type="text"
+                          className="input"
+                          placeholder="Room (optional)"
+                          value={s.room || ''}
+                          onChange={e => setVenueField(i, 'room', e.target.value)}
+                          style={{ fontSize: 13, padding: '8px 12px' }}
+                        />
+                        <input
+                          type="text"
+                          className="input"
+                          placeholder="Address (optional)"
+                          value={s.address || ''}
+                          onChange={e => setVenueField(i, 'address', e.target.value)}
+                          style={{ fontSize: 13, padding: '8px 12px' }}
+                        />
+                      </div>
                       {hasConflict && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 7, fontSize: 11, color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                           Time overlaps with another module on this date
+                        </div>
+                      )}
+                      {hasPrecedence && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 7, fontSize: 11, color: 'var(--red)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                          {precedenceMsg}
                         </div>
                       )}
                     </div>
@@ -302,9 +416,13 @@ export default function CreateCohort() {
             >
               {canCreate
                 ? `Create Schedule · ${courseSlots.length} modules, ${sections} section${sections !== 1 ? 's' : ''}`
-                : hasOverlap
-                  ? 'Resolve time overlaps to continue'
-                  : 'Set a date for each module to continue'}
+                : duplicateCohort
+                  ? 'Duplicate schedule — choose different dates'
+                  : hasOverlap
+                    ? 'Resolve time overlaps to continue'
+                    : hasPrecedenceError
+                      ? 'Modules must be scheduled in order'
+                      : 'Set a date for each module to continue'}
             </button>
           )}
         </div>

@@ -8,7 +8,7 @@ const AppContext = createContext(null)
 function toModule(r)  { return { id: r.id, name: r.name, description: r.description, tags: r.tags || [], durationHours: r.duration_hours ?? 2, createdAt: r.created_at } }
 function toCourse(r)  { return { id: r.id, code: r.code, name: r.name, fullTitle: r.full_title, shortName: r.short_name, color: r.color, num: r.num, track: r.track, days: r.days || [], groups: r.groups || [], createdAt: r.created_at } }
 function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, slotDates: r.slot_dates || [], createdAt: r.created_at } }
-function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, eligibleModules: (r.instructor_modules || []).map(m => m.module_id), createdAt: r.created_at } }
+function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, eligibleGroups: r.eligible_groups || [], createdAt: r.created_at } }
 function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, courseId: r.course_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
 
@@ -43,7 +43,7 @@ export function AppProvider({ children }) {
         supabase.from('modules').select('*').order('created_at'),
         supabase.from('courses').select('*').order('num'),
         supabase.from('cohorts').select('*').order('created_at'),
-        supabase.from('instructors').select('*, instructor_modules(module_id)').order('created_at'),
+        supabase.from('instructors').select('*').order('created_at'),
         supabase.from('claims').select('*').order('created_at'),
         supabase.from('notifications').select('*').order('created_at', { ascending: false }),
       ])
@@ -178,20 +178,19 @@ export function AppProvider({ children }) {
 
   // ── Instructors ───────────────────────────────────────────────────────────────
   const addInstructor = useCallback(async (inst) => {
-    const { data, error } = await supabase.from('instructors').insert({ id: inst.id, name: inst.name, email: inst.email || null }).select().single()
+    const { data, error } = await supabase.from('instructors')
+      .insert({ id: inst.id, name: inst.name, email: inst.email || null, eligible_groups: inst.eligibleGroups || [] })
+      .select().single()
     if (error || !data) return
-    const moduleLinks = (inst.eligibleModules || []).map(mid => ({ instructor_id: data.id, module_id: mid }))
-    if (moduleLinks.length > 0) await supabase.from('instructor_modules').insert(moduleLinks)
-    setInstructors(prev => [...prev, { ...toInstructor(data), eligibleModules: inst.eligibleModules || [] }])
+    setInstructors(prev => [...prev, toInstructor(data)])
   }, [])
 
   const updateInstructor = useCallback(async (inst) => {
-    const { data, error } = await supabase.from('instructors').update({ name: inst.name, email: inst.email || null }).eq('id', inst.id).select().single()
+    const { data, error } = await supabase.from('instructors')
+      .update({ name: inst.name, email: inst.email || null, eligible_groups: inst.eligibleGroups || [] })
+      .eq('id', inst.id).select().single()
     if (error || !data) return
-    await supabase.from('instructor_modules').delete().eq('instructor_id', inst.id)
-    const moduleLinks = (inst.eligibleModules || []).map(mid => ({ instructor_id: inst.id, module_id: mid }))
-    if (moduleLinks.length > 0) await supabase.from('instructor_modules').insert(moduleLinks)
-    setInstructors(prev => prev.map(x => x.id === inst.id ? { ...toInstructor(data), eligibleModules: inst.eligibleModules || [] } : x))
+    setInstructors(prev => prev.map(x => x.id === inst.id ? toInstructor(data) : x))
   }, [])
 
   const deleteInstructor = useCallback(async (id) => {
@@ -224,8 +223,15 @@ export function AppProvider({ children }) {
       supabase.from('claims').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
       supabase.from('cohorts').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
       supabase.from('notifications').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('instructors').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('modules').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('courses').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
     ])
-    setCohorts([]); setClaims([]); setNotifications([])
+    setCohorts([]); setClaims([]); setNotifications([]); setInstructors([]); setModules([])
+    // Re-seed the default courses
+    await seedCoursesIfEmpty()
+    const { data } = await supabase.from('courses').select('*').order('num')
+    setCourses((data || []).map(toCourse))
   }, [])
 
   return (

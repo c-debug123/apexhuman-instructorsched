@@ -103,7 +103,7 @@ body {
   width: 100%; background: var(--surface-sm); border: 1px solid var(--border-md);
   border-radius: var(--radius-sm); color: var(--text-1);
   font-family: 'Inter', sans-serif; font-size: 16px;
-  padding: 14px 16px; outline: none; transition: border-color 0.15s;
+  padding: 10px 14px; outline: none; transition: border-color 0.15s;
   -webkit-appearance: none; appearance: none;
 }
 .input:focus { border-color: var(--teal); }

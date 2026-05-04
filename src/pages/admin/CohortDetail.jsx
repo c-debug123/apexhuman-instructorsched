@@ -139,6 +139,14 @@ export default function CohortDetail() {
                           </span>
                         )}
                       </div>
+                      {(sd?.room || sd?.address) && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span style={{ fontSize: 11, color: 'var(--text-4)' }}>
+                            {[sd.room, sd.address].filter(Boolean).join(' · ')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -157,10 +165,12 @@ export default function CohortDetail() {
                   <th style={thStyle('left')}>Sec</th>
                   {Array.from({ length: dayCount }, (_, i) => {
                     const dayDef = course?.days?.[i]
-                    const label  = dayDef?.label || (dayDef?.moduleId ? `D${i+1}` : `D${i+1}`)
+                    const mod    = modules.find(m => m.id === dayDef?.moduleId)
+                    const name   = mod?.name || dayDef?.label || `D${i + 1}`
+                    const abbr   = name.length > 8 ? name.slice(0, 7) + '…' : name
                     return (
-                      <th key={i} style={thStyle('center')} title={dayDef?.label || ''}>
-                        {label.length > 4 ? `D${i+1}` : label}
+                      <th key={i} style={thStyle('center')} title={name}>
+                        {abbr}
                       </th>
                     )
                   })}
@@ -175,24 +185,20 @@ export default function CohortDetail() {
                     {Array.from({ length: dayCount }, (_, di) => {
                       const slot     = getSlot(di + 1, si + 1)
                       const hasClaim = !!slot?.claim
-                      const label    = slot?.moduleName || slot?.instructorType || ''
                       return (
                         <td
                           key={di}
                           onClick={() => handleCellTap(slot)}
                           style={{
-                            padding: '8px 6px', textAlign: 'center',
+                            padding: '10px 6px', textAlign: 'center',
                             background: hasClaim ? 'var(--teal-dim)' : 'transparent',
                             cursor: hasClaim ? 'pointer' : 'default',
                             borderBottom: si < cohort.sections - 1 ? '1px solid var(--border-dim)' : 'none',
                             transition: 'background 0.15s',
                           }}
                         >
-                          <div style={{ fontSize: 9, color: 'var(--text-4)', fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 48 }}>
-                            {label.split(' ')[0]}
-                          </div>
                           {hasClaim
-                            ? <div style={{ fontSize: 10, color: 'var(--teal)', fontWeight: 500, lineHeight: 1.2 }}>{slot.claim.instructorName.split(' ')[0]}</div>
+                            ? <div style={{ fontSize: 11, color: 'var(--teal)', fontWeight: 600, lineHeight: 1.2, fontFamily: 'Space Grotesk' }}>{slot.claim.instructorName.split(' ')[0]}</div>
                             : <div style={{ fontSize: 10, color: 'var(--text-4)' }}>Open</div>}
                         </td>
                       )

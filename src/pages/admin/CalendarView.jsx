@@ -54,6 +54,8 @@ function getDayEvents(dateStr, cohorts, courses, modules, claims) {
         label: courseSlot?.label || mod?.name || `Module ${sd.slotIndex + 1}`,
         filled: sectionClaims.length,
         total: cohort.sections,
+        room: sd.room || '',
+        address: sd.address || '',
       })
     }
   }
@@ -101,10 +103,12 @@ export default function CalendarView() {
       const hasEvents = eventDates.has(dateStr)
       const events    = hasEvents ? getDayEvents(dateStr, cohorts, courses, modules, claims) : []
       const uniqueCourses = hasEvents ? [...new Map(events.map(e => [e.cohort.courseId, e.course])).values()].filter(Boolean) : []
-      const dayTotal  = events.reduce((s, e) => s + e.total, 0)
-      const dayFilled = events.reduce((s, e) => s + e.filled, 0)
-      const fillPct   = dayTotal > 0 ? dayFilled / dayTotal : 0
-      return { date, dateStr, inMonth, hasEvents, events, uniqueCourses, dayTotal, dayFilled, fillPct }
+      const dayTotal      = events.reduce((s, e) => s + e.total, 0)
+      const dayFilled     = events.reduce((s, e) => s + e.filled, 0)
+      const fillPct       = dayTotal > 0 ? dayFilled / dayTotal : 0
+      const dayTotalHours = events.reduce((s, e) => s + e.durationHours, 0)
+      const sessionCount  = events.length
+      return { date, dateStr, inMonth, hasEvents, events, uniqueCourses, dayTotal, dayFilled, fillPct, dayTotalHours, sessionCount }
     })
   }, [monthDate, cohorts, courses, modules, claims, eventDates])
 
@@ -163,10 +167,11 @@ export default function CalendarView() {
         <div style={{ padding: '0 16px', paddingBottom: 100 }}>
           {/* Month grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3, marginBottom: 20 }}>
-            {cells.map(({ date, dateStr, inMonth, hasEvents, uniqueCourses, fillPct }) => {
+            {cells.map(({ date, dateStr, inMonth, hasEvents, uniqueCourses, fillPct, dayTotalHours, sessionCount }) => {
               const isToday    = dateStr === todayStr
               const isSelected = dateStr === selectedDay
               const isWeekend  = date.getDay() === 0 || date.getDay() === 6
+              const hoursLabel = dayTotalHours > 0 ? (Number.isInteger(dayTotalHours) ? `${dayTotalHours}h` : `${dayTotalHours.toFixed(1)}h`) : ''
               return (
                 <button
                   key={dateStr}
@@ -180,6 +185,19 @@ export default function CalendarView() {
                     display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center',
                   }}
                 >
+                  {/* Session count badge */}
+                  {hasEvents && sessionCount > 1 && (
+                    <div style={{
+                      position: 'absolute', top: 4, right: 4,
+                      background: 'rgba(124,106,247,0.25)', borderRadius: 'var(--radius-full)',
+                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 8,
+                      color: 'var(--accent)', lineHeight: 1, padding: '2px 4px',
+                    }}>
+                      {sessionCount}×
+                    </div>
+                  )}
+
+                  {/* Date number */}
                   <div style={{
                     fontFamily: 'Space Grotesk', fontWeight: isToday ? 700 : 500, fontSize: 13, lineHeight: 1,
                     color: isToday ? 'var(--accent)' : inMonth ? (hasEvents ? 'var(--text-1)' : isWeekend ? 'var(--text-4)' : 'var(--text-3)') : 'rgba(255,255,255,0.12)',
@@ -188,12 +206,23 @@ export default function CalendarView() {
                   }}>
                     {date.getDate()}
                   </div>
+
+                  {/* Course dots */}
                   {hasEvents && (
-                    <div style={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 3 }}>
-                      {uniqueCourses.slice(0, 3).map(c => <div key={c.id} style={{ width: 6, height: 6, borderRadius: '50%', background: c.color }} />)}
-                      {uniqueCourses.length > 3 && <div style={{ fontSize: 8, color: 'var(--text-4)', lineHeight: '6px', fontFamily: 'Space Grotesk', fontWeight: 600 }}>+{uniqueCourses.length - 3}</div>}
+                    <div style={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 2 }}>
+                      {uniqueCourses.slice(0, 2).map(c => <div key={c.id} style={{ width: 5, height: 5, borderRadius: '50%', background: c.color }} />)}
+                      {uniqueCourses.length > 2 && <div style={{ fontSize: 7, color: 'var(--text-4)', lineHeight: '5px', fontFamily: 'Space Grotesk', fontWeight: 700 }}>+{uniqueCourses.length - 2}</div>}
                     </div>
                   )}
+
+                  {/* Total hours */}
+                  {hasEvents && hoursLabel && (
+                    <div style={{ fontSize: 8, color: 'var(--text-4)', fontFamily: 'Space Grotesk', fontWeight: 600, marginBottom: 3, lineHeight: 1 }}>
+                      {hoursLabel}
+                    </div>
+                  )}
+
+                  {/* Fill bar */}
                   {hasEvents && (
                     <div style={{ width: '100%', height: 3, borderRadius: 2, background: 'var(--surface-lg)', overflow: 'hidden', marginTop: 'auto' }}>
                       <div style={{ height: '100%', width: `${fillPct * 100}%`, background: fillPct === 1 ? 'var(--green)' : fillPct >= 0.5 ? 'var(--amber)' : 'var(--red)', borderRadius: 2, transition: 'width 300ms ease' }} />
@@ -257,9 +286,17 @@ export default function CalendarView() {
                               <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {ev.label}
                               </div>
-                              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
+                              <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: ev.room || ev.address ? 4 : 8 }}>
                                 {ev.course.name} · {ev.total} section{ev.total !== 1 ? 's' : ''}
                               </div>
+                              {(ev.room || ev.address) && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                  <span style={{ fontSize: 11, color: 'var(--text-4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {[ev.room, ev.address].filter(Boolean).join(' · ')}
+                                  </span>
+                                </div>
+                              )}
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <div className="progress-track" style={{ flex: 1 }}>
                                   <div className="progress-fill" style={{ width: `${pct * 100}%`, background: barColor }} />

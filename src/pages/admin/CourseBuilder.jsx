@@ -10,8 +10,17 @@ import { CSS } from '@dnd-kit/utilities'
 import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
+import SwipeableRow from '../../components/SwipeableRow'
+import SearchInput from '../../components/SearchInput'
 
 const COLORS = ['#7c6af7','#ec4899','#f59e0b','#22c55e','#2dd4bf','#3b82f6','#f97316','#a78bfa','#e11d48','#0ea5e9']
+
+function EditIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+}
+function TrashIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+}
 
 function DupWarning({ text }) {
   return (
@@ -235,10 +244,7 @@ function SortableSlotRow({ slot, index, modules, onEdit, onRemove }) {
           {slot.label && mod ? ` · ${mod.name}` : ''}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button className="btn btn-ghost" onClick={() => onEdit(slot)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26 }}>Label</button>
-        <button className="btn btn-ghost" onClick={() => onRemove(slot.id)} style={{ fontSize: 11, padding: '3px 8px', minHeight: 26, color: 'var(--red)' }}>×</button>
-      </div>
+      <button className="btn btn-ghost" onClick={() => onRemove(slot.id)} style={{ fontSize: 14, padding: '3px 8px', minHeight: 26, color: 'var(--text-4)', flexShrink: 0 }}>×</button>
     </div>
   )
 }
@@ -335,8 +341,9 @@ export default function CourseBuilder() {
   const navigate = useNavigate()
   const { modules, courses, addCourse, updateCourse, deleteCourse } = useApp()
 
-  const [view, setView]             = useState('list')
-  const [editCourse, setEditCourse] = useState(null)
+  const [view, setView]               = useState('list')
+  const [editCourse, setEditCourse]   = useState(null)
+  const [detailCourse, setDetailCourse] = useState(null)
 
   const [name, setName]           = useState('')
   const [code, setCode]           = useState('')
@@ -345,15 +352,64 @@ export default function CourseBuilder() {
   const [slots, setSlots]         = useState([])
   const [groups, setGroups]       = useState([])
 
-  const [showPicker, setShowPicker]   = useState(false)
-  const [editSlot, setEditSlot]       = useState(null)
+  const [showPicker, setShowPicker]       = useState(false)
+  const [editSlot, setEditSlot]           = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+
+  // List view state
+  const [search, setSearch]               = useState('')
+  const [sortBy, setSortBy]               = useState('name-asc')
+  const [showSort, setShowSort]           = useState(false)
+  const [selectMode, setSelectMode]       = useState(false)
+  const [selected, setSelected]           = useState(new Set())
+  const [showBulkDelete, setShowBulkDelete] = useState(false)
+
+  const SORT_OPTIONS = [
+    { value: 'name-asc',  label: 'Name A → Z' },
+    { value: 'name-desc', label: 'Name Z → A' },
+    { value: 'code-asc',  label: 'Code A → Z' },
+    { value: 'mods-desc', label: 'Most modules' },
+    { value: 'hrs-desc',  label: 'Most hours' },
+  ]
+
+  function applyListSort(list) {
+    return [...list].sort((a, b) => {
+      if (sortBy === 'name-asc')  return a.name.localeCompare(b.name)
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name)
+      if (sortBy === 'code-asc')  return a.code.localeCompare(b.code)
+      if (sortBy === 'mods-desc') return (b.days?.length || 0) - (a.days?.length || 0)
+      if (sortBy === 'hrs-desc')  return totalHours(b.days || [], modules || []) - totalHours(a.days || [], modules || [])
+      return 0
+    })
+  }
+
+  const filteredCourses = applyListSort(
+    (courses || []).filter(c =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.code.toLowerCase().includes(search.toLowerCase()) ||
+      (c.fullTitle || '').toLowerCase().includes(search.toLowerCase())
+    )
+  )
+
+  function toggleSelect(id) {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+  function exitSelect() { setSelectMode(false); setSelected(new Set()) }
+  function handleBulkDelete() {
+    [...selected].forEach(id => deleteCourse(id))
+    exitSelect(); setShowBulkDelete(false)
+  }
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
+  function nextAvailableColor() {
+    const used = new Set((courses || []).map(c => c.color))
+    return COLORS.find(c => !used.has(c)) ?? COLORS[(courses || []).length % COLORS.length]
+  }
+
   function openCreate() {
     setEditCourse(null)
-    setName(''); setCode(''); setFullTitle(''); setColor(COLORS[0]); setSlots([]); setGroups([])
+    setName(''); setCode(''); setFullTitle(''); setColor(nextAvailableColor()); setSlots([]); setGroups([])
     setView('edit')
   }
 
@@ -362,6 +418,11 @@ export default function CourseBuilder() {
     setName(course.name); setCode(course.code); setFullTitle(course.fullTitle || ''); setColor(course.color || COLORS[0])
     setSlots(course.days || []); setGroups(course.groups || [])
     setView('edit')
+  }
+
+  function openDetail(course) {
+    setDetailCourse(course)
+    setView('detail')
   }
 
   // Duplicate detection — exclude self when editing
@@ -374,9 +435,15 @@ export default function CourseBuilder() {
   function handleSave() {
     if (!name.trim() || !code.trim() || hasDup) return
     const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), color, days: slots, groups }
-    if (editCourse) updateCourse({ ...editCourse, ...payload })
-    else addCourse({ id: crypto.randomUUID(), ...payload, createdAt: new Date().toISOString() })
-    setView('list')
+    if (editCourse) {
+      const updated = { ...editCourse, ...payload }
+      updateCourse(updated)
+      setDetailCourse(updated)
+      setView('detail')
+    } else {
+      addCourse({ id: crypto.randomUUID(), ...payload, createdAt: new Date().toISOString() })
+      setView('list')
+    }
   }
 
   function handleDragEnd({ active, over }) {
@@ -408,59 +475,129 @@ export default function CourseBuilder() {
 
   // ── List view ───────────────────────────────────────────────────────────────
   if (view === 'list') {
+    const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort'
     return (
       <div className="admin-bg">
         <div className="z1 page">
           <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
             <div style={{ paddingTop: 8, paddingBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => navigate('/admin')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+
+              {/* Header */}
+              {selectMode ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, minHeight: 36 }}>
+                  <button onClick={exitSelect} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, padding: '4px 0' }}>Cancel</button>
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-2)' }}>{selected.size} selected</span>
+                  <button onClick={() => selected.size > 0 && setShowBulkDelete(true)} disabled={selected.size === 0} style={{ background: 'none', border: 'none', cursor: selected.size > 0 ? 'pointer' : 'default', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: selected.size > 0 ? 'var(--red)' : 'var(--text-4)', padding: '4px 0', opacity: selected.size > 0 ? 1 : 0.4 }}>
+                    Delete {selected.size > 0 ? `(${selected.size})` : ''}
                   </button>
-                  <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Courses</h1>
                 </div>
-              </div>
-              <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
-                {(courses || []).length === 0 ? 'No courses yet.' : `${(courses || []).length} course${(courses || []).length !== 1 ? 's' : ''} defined`}
-              </p>
-              <button className="btn btn-primary" onClick={openCreate}>+ New Course</button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button onClick={() => navigate('/admin')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>Courses</h1>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => setShowSort(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/><line x1="9" y1="18" x2="15" y2="18"/></svg> Sort
+                    </button>
+                    {(courses || []).length > 0 && (
+                      <button onClick={() => setSelectMode(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, padding: '4px 0' }}>Select</button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!selectMode && (
+                <>
+                  <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
+                    {(courses || []).length === 0 ? 'No courses yet.' : `${(courses || []).length} course${(courses || []).length !== 1 ? 's' : ''} defined`}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <SearchInput placeholder="Search courses…" value={search} onChange={setSearch} />
+                    <button className="btn btn-primary" onClick={openCreate} style={{ whiteSpace: 'nowrap' }}>+ New</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
+          {sortBy !== 'name-asc' && !selectMode && (
+            <div style={{ padding: '0 16px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Space Grotesk' }}>Sorted by:</span>
+              <span style={{ fontSize: 11, color: 'var(--accent)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>{sortLabel}</span>
+              <button onClick={() => setSortBy('name-asc')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-4)', fontSize: 13, padding: '0 2px', lineHeight: 1 }}>×</button>
+            </div>
+          )}
+
           <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 100 }}>
-            {(courses || []).length === 0 && (
+            {filteredCourses.length === 0 && (
               <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-2)', marginBottom: 16 }}>No courses yet.</div>
-                <button className="btn btn-primary" onClick={openCreate} style={{ margin: '0 auto' }}>Create your first course</button>
+                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-2)', marginBottom: 16 }}>
+                  {search ? 'No courses match your search.' : 'No courses yet.'}
+                </div>
+                {!search && <button className="btn btn-primary" onClick={openCreate} style={{ margin: '0 auto' }}>Create your first course</button>}
               </div>
             )}
-            {(courses || []).map(course => {
+
+            {filteredCourses.map(course => {
               const h = totalHours(course.days || [], modules || [])
+              const isSelected = selected.has(course.id)
               return (
-                <div key={course.id} className="card" style={{ padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 4, height: 40, borderRadius: 2, background: course.color, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, color: 'var(--text-1)', marginBottom: 2 }}>
-                        {course.code}: {course.name}
+                <SwipeableRow
+                  key={course.id}
+                  disabled={selectMode}
+                  leftAction={{ label: 'EDIT', icon: <EditIcon />, color: 'var(--accent)', bg: 'rgba(124,106,247,0.18)', onClick: () => openEdit(course) }}
+                  rightAction={{ label: 'DELETE', icon: <TrashIcon />, color: 'var(--red)', bg: 'rgba(239,68,68,0.18)', onClick: () => setConfirmDelete(course) }}
+                >
+                  <div
+                    className="card"
+                    onClick={selectMode ? () => toggleSelect(course.id) : () => openDetail(course)}
+                    style={{ padding: '12px 14px', cursor: 'pointer', background: isSelected ? 'rgba(124,106,247,0.08)' : undefined, border: isSelected ? '1px solid var(--accent-border)' : undefined }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      {selectMode ? (
+                        <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0, border: `2px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`, background: isSelected ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {isSelected && <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                        </div>
+                      ) : (
+                        <div style={{ width: 4, alignSelf: 'stretch', borderRadius: 2, background: course.color, flexShrink: 0 }} />
+                      )}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 14, color: 'var(--text-1)', marginBottom: 2 }}>
+                          {course.code}: {course.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                          {(course.days || []).length} module{(course.days || []).length !== 1 ? 's' : ''}
+                          {h > 0 && ` · ${h}h total`}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {(course.days || []).length} module{(course.days || []).length !== 1 ? 's' : ''}
-                        {h > 0 && ` · ${h}h total`}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button className="btn btn-ghost" onClick={() => openEdit(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30 }}>Edit</button>
-                      <button className="btn btn-ghost" onClick={() => setConfirmDelete(course)} style={{ fontSize: 12, padding: '4px 10px', minHeight: 30, color: 'var(--red)' }}>Delete</button>
+                      {!selectMode && (
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: course.color, flexShrink: 0 }} />
+                      )}
                     </div>
                   </div>
-                </div>
+                </SwipeableRow>
               )
             })}
           </div>
         </div>
 
+        {/* Sort sheet */}
+        <BottomSheet isOpen={showSort} onClose={() => setShowSort(false)} title="Sort courses">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {SORT_OPTIONS.map(opt => (
+              <button key={opt.value} onClick={() => { setSortBy(opt.value); setShowSort(false) }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 'var(--radius-sm)', background: sortBy === opt.value ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${sortBy === opt.value ? 'var(--accent-border)' : 'transparent'}`, cursor: 'pointer', textAlign: 'left' }}>
+                <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: sortBy === opt.value ? 'var(--accent)' : 'var(--text-1)' }}>{opt.label}</span>
+                {sortBy === opt.value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
+            ))}
+          </div>
+        </BottomSheet>
+
+        {/* Single delete confirm */}
         <BottomSheet isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Delete course?">
           {confirmDelete && (
             <div>
@@ -478,6 +615,165 @@ export default function CourseBuilder() {
           )}
         </BottomSheet>
 
+        {/* Bulk delete confirm */}
+        <BottomSheet isOpen={showBulkDelete} onClose={() => setShowBulkDelete(false)} title={`Delete ${selected.size} course${selected.size !== 1 ? 's' : ''}?`}>
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
+              This will permanently delete the selected courses. Any cohorts using them will be affected. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={handleBulkDelete}>Delete {selected.size}</button>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowBulkDelete(false)}>Cancel</button>
+            </div>
+          </div>
+        </BottomSheet>
+
+        {/* Next step bar */}
+        {(courses || []).length > 0 && !selectMode && (
+          <div style={{
+            position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
+            left: 0, right: 0, padding: '8px 16px',
+            background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
+            pointerEvents: 'none', zIndex: 50,
+          }}>
+            <button
+              onClick={() => navigate('/admin/cohorts/new')}
+              style={{
+                width: '100%', pointerEvents: 'all',
+                background: 'var(--surface-md)', border: '1px solid var(--border-md)',
+                borderRadius: 'var(--radius-lg)', padding: '11px 16px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                cursor: 'pointer',
+              }}
+            >
+              <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
+                Next: Schedule a Course
+              </span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
+        )}
+
+        <BottomNav role="admin" />
+      </div>
+    )
+  }
+
+  // ── Detail view ─────────────────────────────────────────────────────────────
+  if (view === 'detail' && detailCourse) {
+    const dc   = courses.find(c => c.id === detailCourse.id) || detailCourse
+    const mods = modules || []
+    const hrs  = totalHours(dc.days || [], mods)
+    return (
+      <div className="admin-bg">
+        <div className="z1 page">
+          <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
+            <div style={{ paddingTop: 8, paddingBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <div>
+                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', lineHeight: 1.2 }}>
+                      {dc.code}: {dc.name}
+                    </div>
+                    {dc.fullTitle && (
+                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{dc.fullTitle}</div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => openEdit(dc)}
+                  style={{ padding: '6px 16px', fontSize: 13, flexShrink: 0 }}
+                >
+                  Edit
+                </button>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingLeft: 4 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: dc.color }} />
+                <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
+                  {(dc.days || []).length} module{(dc.days || []).length !== 1 ? 's' : ''}
+                  {hrs > 0 && ` · ${hrs}h total`}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ padding: '0 16px', paddingBottom: 100, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Module sequence */}
+            {(dc.days || []).length > 0 && (
+              <section>
+                <div style={sectionHeader}>Module Sequence</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(dc.days || []).map((slot, i) => {
+                    const mod = mods.find(m => m.id === slot.moduleId)
+                    return (
+                      <div key={slot.id || i} className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 11, color: 'var(--accent)' }}>
+                          {i + 1}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>
+                            {slot.label || mod?.name || <span style={{ color: 'var(--text-4)' }}>Unknown module</span>}
+                          </div>
+                          {mod && (
+                            <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>
+                              {mod.durationHours}h{slot.label && mod.name !== slot.label ? ` · ${mod.name}` : ''}
+                            </div>
+                          )}
+                        </div>
+                        {(mod?.tags || []).length > 0 && (
+                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)', flexShrink: 0 }}>
+                            {mod.tags[0]}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Instructor groups */}
+            {(dc.groups || []).length > 0 && (
+              <section>
+                <div style={sectionHeader}>Instructor Groups</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {dc.groups.map(group => {
+                    const groupSlots = (group.dayIndexes || []).map(idx => dc.days?.[idx]).filter(Boolean)
+                    return (
+                      <div key={group.id} className="card" style={{ padding: '12px 14px' }}>
+                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 8 }}>
+                          {group.name}
+                        </div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {groupSlots.map((slot, i) => {
+                            const mod = mods.find(m => m.id === slot.moduleId)
+                            return (
+                              <span key={slot.id || i} style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--surface-xs)', color: 'var(--text-2)', border: '1px solid var(--border-dim)' }}>
+                                {slot.label || mod?.name || `Slot ${group.dayIndexes[i] + 1}`}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {(dc.days || []).length === 0 && (
+              <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>No modules added to this course yet.</div>
+                <button className="btn btn-primary" onClick={() => openEdit(dc)} style={{ margin: '0 auto' }}>Edit Course</button>
+              </div>
+            )}
+          </div>
+        </div>
         <BottomNav role="admin" />
       </div>
     )
@@ -492,7 +788,7 @@ export default function CourseBuilder() {
             <div style={{ paddingTop: 8, paddingBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => setView('list')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
+                  <button onClick={() => editCourse && detailCourse ? setView('detail') : setView('list')} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
                   </button>
                   <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', margin: 0 }}>
@@ -549,9 +845,32 @@ export default function CourseBuilder() {
                 <div>
                   <label style={labelStyle}>Course colour</label>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {COLORS.map(c => (
-                      <button key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: 'none', cursor: 'pointer', outline: color === c ? `3px solid ${c}` : 'none', outlineOffset: 2 }} />
-                    ))}
+                    {COLORS.map(c => {
+                      const inUse = (courses || []).some(x => x.color === c && (!editCourse || x.id !== editCourse.id))
+                      const isSelected = color === c
+                      return (
+                        <div key={c} style={{ position: 'relative' }}>
+                          <button
+                            onClick={() => setColor(c)}
+                            style={{
+                              width: 28, height: 28, borderRadius: '50%', background: c, border: 'none',
+                              cursor: 'pointer', opacity: inUse && !isSelected ? 0.35 : 1,
+                              outline: isSelected ? `3px solid ${c}` : 'none', outlineOffset: 2,
+                            }}
+                          />
+                          {inUse && !isSelected && (
+                            <div style={{
+                              position: 'absolute', bottom: -1, right: -1,
+                              width: 8, height: 8, borderRadius: '50%',
+                              background: 'var(--bg)', border: '1px solid var(--border)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                              <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--text-4)' }} />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

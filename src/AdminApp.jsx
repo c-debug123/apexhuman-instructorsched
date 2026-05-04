@@ -4,6 +4,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import CreateCohort from './pages/admin/CreateCohort'
 import CohortDetail from './pages/admin/CohortDetail'
 import InstructorRoster from './pages/admin/InstructorRoster'
+import InstructorDetail from './pages/admin/InstructorDetail'
 import CalendarView from './pages/admin/CalendarView'
 import ReferencePage from './pages/admin/ReferencePage'
 import ModuleLibrary from './pages/admin/ModuleLibrary'
@@ -20,6 +21,7 @@ function AdminRoutes() {
       <Route path="/admin/cohorts/:id" element={<CohortDetail />} />
       <Route path="/admin/calendar" element={<CalendarView />} />
       <Route path="/admin/roster" element={<InstructorRoster />} />
+      <Route path="/admin/roster/:id" element={<InstructorDetail />} />
       <Route path="/admin/reference" element={<ReferencePage />} />
       <Route path="/admin/modules" element={<ModuleLibrary />} />
       <Route path="/admin/courses" element={<CourseBuilder />} />

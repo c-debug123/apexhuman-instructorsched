@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
+import SearchInput from '../../components/SearchInput'
 
 const SORT_OPTIONS = [
   { value: 'name-asc',     label: 'Name A → Z' },
@@ -38,14 +40,16 @@ function SortIcon() {
 function InstructorForm({ initial, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
   const [email, setEmail]   = useState(initial?.email || '')
-  const [eligible, setElig] = useState(initial?.eligibleModules || [])
+  const [eligible, setElig] = useState(initial?.eligibleGroups || [])
 
-  function toggleModule(id) {
-    setElig(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const allGroups = [...new Set((modules || []).flatMap(m => m.tags || []))].sort()
+
+  function toggleGroup(g) {
+    setElig(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
   }
   function handleSave() {
     if (name.trim().length < 2) return
-    onSave({ name: name.trim(), email: email.trim(), eligibleModules: eligible })
+    onSave({ name: name.trim(), email: email.trim(), eligibleGroups: eligible })
   }
 
   return (
@@ -59,28 +63,29 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         <input className="input" type="email" placeholder="instructor@example.com" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
-        <label style={labelStyle}>Eligible modules</label>
-        {(modules || []).length === 0 ? (
-          <p style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>No modules in the library yet.</p>
+        <label style={labelStyle}>Module groups</label>
+        <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 10, lineHeight: 1.5 }}>
+          This instructor can teach any module belonging to the selected groups.
+        </p>
+        {allGroups.length === 0 ? (
+          <p style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>No module groups yet — add tags to modules first.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {modules.map(m => {
-              const on = eligible.includes(m.id)
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {allGroups.map(g => {
+              const on = eligible.includes(g)
               return (
-                <button key={m.id} type="button" onClick={() => toggleModule(m.id)} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px',
-                  borderRadius: 'var(--radius-sm)',
-                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-dim)'}`,
+                <button key={g} type="button" onClick={() => toggleGroup(g)} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '7px 14px', borderRadius: 'var(--radius-full)',
+                  border: `1px solid ${on ? 'var(--accent)' : 'var(--border-md)'}`,
                   background: on ? 'var(--accent-dim)' : 'var(--surface-xs)',
-                  cursor: 'pointer', textAlign: 'left',
+                  cursor: 'pointer', transition: 'all 150ms',
                 }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `2px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {on && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: on ? 'var(--accent)' : 'var(--text-1)' }}>{m.name}</div>
-                    {m.description && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{m.description}</div>}
-                  </div>
+                  {on && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke={on ? 'var(--accent)' : 'var(--text-4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: on ? 'var(--accent)' : 'var(--text-2)' }}>{g}</span>
+                  <span style={{ fontSize: 11, color: on ? 'var(--accent)' : 'var(--text-4)' }}>
+                    {(modules || []).filter(m => (m.tags || []).includes(g)).length}
+                  </span>
                 </button>
               )
             })}
@@ -100,9 +105,10 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
 export default function InstructorRoster() {
   const { instructors, modules, claims, addInstructor, updateInstructor, deleteInstructor } = useApp()
 
+  const navigate = useNavigate()
+
   const [showCreate, setShowCreate]       = useState(false)
   const [editing, setEditing]             = useState(null)
-  const [expanded, setExpanded]           = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [search, setSearch]               = useState('')
   const [sortBy, setSortBy]               = useState('name-asc')
@@ -119,7 +125,7 @@ export default function InstructorRoster() {
     return [...list].sort((a, b) => {
       if (sortBy === 'name-asc')     return a.name.localeCompare(b.name)
       if (sortBy === 'name-desc')    return b.name.localeCompare(a.name)
-      if (sortBy === 'modules-desc') return (b.eligibleModules?.length || 0) - (a.eligibleModules?.length || 0)
+      if (sortBy === 'modules-desc') return (b.eligibleGroups?.length || 0) - (a.eligibleGroups?.length || 0)
       if (sortBy === 'claims-desc')  return claimList.filter(cl => cl.instructorId === b.id).length - claimList.filter(cl => cl.instructorId === a.id).length
       return 0
     })
@@ -206,7 +212,7 @@ export default function InstructorRoster() {
                     : `${instructorList.length} instructor${instructorList.length !== 1 ? 's' : ''} registered`}
                 </p>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="input" placeholder="Search instructors..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, fontSize: 13 }} />
+                  <SearchInput placeholder="Search instructors..." value={search} onChange={setSearch} />
                   <button className="btn btn-primary" onClick={() => setShowCreate(true)} style={{ whiteSpace: 'nowrap' }}>+ Add</button>
                 </div>
               </>
@@ -238,9 +244,8 @@ export default function InstructorRoster() {
           )}
 
           {filtered.map(inst => {
-            const instClaims = claimList.filter(cl => cl.instructorId === inst.id)
-            const eligMods   = (inst.eligibleModules || []).map(id => moduleList.find(m => m.id === id)).filter(Boolean)
-            const isExpanded = expanded === inst.id
+            const eligGroups  = inst.eligibleGroups || []
+            const claimCount  = claimList.filter(cl => cl.instructorId === inst.id).length
             const isSelected = selected.has(inst.id)
 
             return (
@@ -264,7 +269,7 @@ export default function InstructorRoster() {
                 >
                   <button
                     className="card card-hover"
-                    onClick={() => selectMode ? toggleSelect(inst.id) : setExpanded(isExpanded ? null : inst.id)}
+                    onClick={() => selectMode ? toggleSelect(inst.id) : navigate(`/admin/roster/${inst.id}`)}
                     style={{ width: '100%', padding: '14px 16px', textAlign: 'left', cursor: 'pointer', background: isSelected ? 'rgba(124,106,247,0.08)' : undefined, border: isSelected ? '1px solid var(--accent-border)' : undefined }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -282,36 +287,20 @@ export default function InstructorRoster() {
                           {inst.name}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                          {eligMods.length === 0 ? 'No modules assigned' : `${eligMods.length} eligible module${eligMods.length !== 1 ? 's' : ''}`}
-                          {instClaims.length > 0 && ` · ${instClaims.length} slot${instClaims.length !== 1 ? 's' : ''} claimed`}
+                          {eligGroups.length === 0 ? 'No groups assigned' : `${eligGroups.length} group${eligGroups.length !== 1 ? 's' : ''}`}
+                          {claimCount > 0 && ` · ${claimCount} slot${claimCount !== 1 ? 's' : ''} claimed`}
                         </div>
                       </div>
                       {!selectMode && (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" style={{ transform: isExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
-                          <polyline points="6 9 12 15 18 9"/>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                          <polyline points="9 18 15 12 9 6"/>
                         </svg>
                       )}
                     </div>
 
-                    {/* Module chips (always visible) */}
-                    {!selectMode && eligMods.length > 0 && (
-                      <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                        {eligMods.map(m => (
-                          <span key={m.id} style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent-border)' }}>
-                            {m.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </button>
                 </SwipeableRow>
 
-                {/* Expanded: show email only */}
-                {isExpanded && !selectMode && inst.email && (
-                  <div className="anim-slide-up" style={{ marginTop: 2, padding: '10px 16px', background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-sm)' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{inst.email}</span>
-                  </div>
-                )}
               </div>
             )
           })}

@@ -13,7 +13,7 @@ export default function SwipeableRow({ leftAction, rightAction, children, disabl
     setAnimating(true)
     setOffset(target)
     setSnapped(target === 0 ? null : target < 0 ? 'left' : 'right')
-    setTimeout(() => setAnimating(false), 250)
+    setTimeout(() => setAnimating(false), 300)
   }
 
   function close() { snapTo(0) }
@@ -36,13 +36,20 @@ export default function SwipeableRow({ leftAction, rightAction, children, disabl
   function handleTouchEnd() {
     if (disabled || startXRef.current === null) return
     startXRef.current = null
-    const moved = offset - baseRef.current
-    if (moved < -36)                 snapTo(-ACTION_W)
-    else if (moved > 36)             snapTo(ACTION_W)
-    else if (offset < -ACTION_W / 2) snapTo(-ACTION_W)
-    else if (offset > ACTION_W / 2)  snapTo(ACTION_W)
-    else                             snapTo(0)
+    if (snapped === 'left') {
+      snapTo(offset > -ACTION_W / 2 ? 0 : -ACTION_W)
+    } else if (snapped === 'right') {
+      snapTo(offset < ACTION_W / 2 ? 0 : ACTION_W)
+    } else {
+      const moved = offset - baseRef.current
+      if (moved < -30 || offset < -ACTION_W / 2) snapTo(-ACTION_W)
+      else if (moved > 30 || offset > ACTION_W / 2) snapTo(ACTION_W)
+      else snapTo(0)
+    }
   }
+
+  const leftOpacity  = Math.min(1, Math.max(0, offset / (ACTION_W * 0.4)))
+  const rightOpacity = Math.min(1, Math.max(0, -offset / (ACTION_W * 0.4)))
 
   return (
     <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', ...style }}>
@@ -52,6 +59,7 @@ export default function SwipeableRow({ leftAction, rightAction, children, disabl
             position: 'absolute', left: 0, top: 0, bottom: 0, width: ACTION_W,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             background: leftAction.bg || 'rgba(124,106,247,0.18)', cursor: 'pointer',
+            opacity: leftOpacity,
           }}
           onClick={() => { close(); leftAction.onClick?.() }}
         >
@@ -68,6 +76,7 @@ export default function SwipeableRow({ leftAction, rightAction, children, disabl
             position: 'absolute', right: 0, top: 0, bottom: 0, width: ACTION_W,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
             background: rightAction.bg || 'rgba(239,68,68,0.18)', cursor: 'pointer',
+            opacity: rightOpacity,
           }}
           onClick={() => { close(); rightAction.onClick?.() }}
         >
@@ -84,7 +93,7 @@ export default function SwipeableRow({ leftAction, rightAction, children, disabl
         onTouchEnd={handleTouchEnd}
         style={{
           transform: `translateX(${offset}px)`,
-          transition: animating ? 'transform 220ms cubic-bezier(0.25,1,0.5,1)' : 'none',
+          transition: animating ? 'transform 300ms cubic-bezier(0.34,1.56,0.64,1)' : 'none',
           position: 'relative', zIndex: 1,
           borderRadius: 'var(--radius-lg)',
         }}

@@ -8,7 +8,7 @@ import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
 export default function SlotBrowser() {
-  const { claims, addClaim, removeClaim, instructors, courses } = useApp()
+  const { claims, addClaim, removeClaim, instructors, courses, modules } = useApp()
   const name        = localStorage.getItem('apex_instructor_name') || ''
   const instructorId = localStorage.getItem('apex_instructor_id') || null
 
@@ -20,20 +20,21 @@ export default function SlotBrowser() {
 
   const slots = useSlots({ dayFilter, courseFilter })
 
-  // Derive this instructor's eligible module IDs
-  const eligibleModuleIds = useMemo(() => {
-    if (!instructorId) return null // null = no id stored, show all
+  // Derive this instructor's eligible groups
+  const eligibleGroups = useMemo(() => {
+    if (!instructorId) return null // null = show all
     const inst = instructors.find(i => i.id === instructorId)
     if (!inst) return null
-    return new Set(inst.eligibleModules || [])
+    return new Set(inst.eligibleGroups || [])
   }, [instructorId, instructors])
 
   function isEligible(slot) {
-    // If no moduleId on slot (course not fully configured), show to everyone
     if (!slot.moduleId) return true
-    // If no instructor id matched, show all (graceful fallback)
-    if (!eligibleModuleIds) return true
-    return eligibleModuleIds.has(slot.moduleId)
+    if (!eligibleGroups) return true
+    if (eligibleGroups.size === 0) return false
+    const mod = modules.find(m => m.id === slot.moduleId)
+    if (!mod) return true
+    return (mod.tags || []).some(tag => eligibleGroups.has(tag))
   }
 
   function handleClaim(slot) {

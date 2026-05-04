@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
+import SearchInput from '../../components/SearchInput'
 
 const TAG_OPTIONS = ['AI', 'Business', 'Creative', 'Technical', 'Marketing', 'Design', 'Operations']
 
@@ -265,7 +266,7 @@ export default function ModuleLibrary() {
 
             {!selectMode && (
               <div style={{ display: 'flex', gap: 8, marginBottom: allTags.length > 0 ? 10 : 0 }}>
-                <input className="input" placeholder="Search modules..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1 }} />
+                <SearchInput placeholder="Search modules..." value={search} onChange={setSearch} />
                 <button className="btn btn-primary" onClick={() => setShowCreate(true)} style={{ whiteSpace: 'nowrap' }}>
                   + New Module
                 </button>
@@ -468,6 +469,32 @@ export default function ModuleLibrary() {
           </div>
         </div>
       </BottomSheet>
+
+      {/* Next step bar */}
+      {(modules || []).length > 0 && !selectMode && (
+        <div style={{
+          position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
+          left: 0, right: 0, padding: '8px 16px',
+          background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
+          pointerEvents: 'none', zIndex: 50,
+        }}>
+          <button
+            onClick={() => navigate('/admin/courses')}
+            style={{
+              width: '100%', pointerEvents: 'all',
+              background: 'var(--surface-md)', border: '1px solid var(--border-md)',
+              borderRadius: 'var(--radius-lg)', padding: '11px 16px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
+              Next: Build Courses
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+      )}
 
       <BottomNav role="admin" />
     </div>

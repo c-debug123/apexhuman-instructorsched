@@ -66,10 +66,14 @@ function SetupStep({ number, label, sublabel, count, onClick, locked, cta }) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const { cohorts, courses, modules, claims, resetAll, deleteCohort } = useApp()
+  const { cohorts, courses, modules, claims, instructors, resetAll, deleteCohort } = useApp()
   const [showReset, setShowReset]       = useState(false)
   const [copied, setCopied]             = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [sortBy, setSortBy]             = useState('newest')
+  const [filterCourse, setFilterCourse] = useState(null)
+  const [showSort, setShowSort]         = useState(false)
+  const [showFilter, setShowFilter]     = useState(false)
 
   function copyInstructorLink() {
     navigator.clipboard.writeText(INSTRUCTOR_URL).then(() => {
@@ -101,8 +105,20 @@ export default function AdminDashboard() {
     return sum
   }, 0)
 
-  const hasModules  = modules.length > 0
-  const hasCourses  = courses.length > 0
+  const hasModules      = modules.length > 0
+  const builtCourses    = courses.filter(c => c.days?.length > 0)
+  const hasCourses      = builtCourses.length > 0
+
+  const uniqueCourseIds = [...new Set(cohorts.map(c => c.courseId))]
+
+  const visibleCohorts = cohorts
+    .filter(c => !filterCourse || c.courseId === filterCourse)
+    .sort((a, b) => {
+      if (sortBy === 'newest') return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      if (sortBy === 'oldest') return new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+      if (sortBy === 'course') return (courses.find(c => c.id === a.courseId)?.code || '').localeCompare(courses.find(c => c.id === b.courseId)?.code || '')
+      return 0
+    })
 
   return (
     <div className="admin-bg">
@@ -128,7 +144,7 @@ export default function AdminDashboard() {
               >
                 <ShareIcon /> {copied ? 'Copied!' : 'Instructor Link'}
               </button>
-              {(cohorts.length > 0 || claims.length > 0) && (
+              {(cohorts.length > 0 || claims.length > 0 || modules.length > 0 || instructors.length > 0 || courses.some(c => c.days?.length > 0)) && (
                 <button
                   onClick={() => setShowReset(true)}
                   style={{
@@ -152,7 +168,7 @@ export default function AdminDashboard() {
                 { label: 'Total Slots', value: totalSlots,          color: 'var(--accent)' },
                 { label: 'Filled',      value: filled,              color: 'var(--teal)' },
                 { label: 'Open',        value: open,                color: 'var(--amber)' },
-                { label: 'Courses',     value: courses.length,      color: 'var(--text-2)' },
+                { label: 'Courses',     value: builtCourses.length, color: 'var(--text-2)' },
               ].map((s, i, arr) => (
                 <div key={s.label} style={{
                   flex: 1, padding: '14px 8px', textAlign: 'center',
@@ -197,7 +213,7 @@ export default function AdminDashboard() {
               label="Build Courses"
               sublabel={n => `${n} course${n !== 1 ? 's' : ''} built`}
               cta={hasModules ? 'Combine modules into a course' : 'Create modules first'}
-              count={courses.length}
+              count={builtCourses.length}
               locked={!hasModules}
               onClick={() => navigate('/admin/courses')}
             />
@@ -213,12 +229,50 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="section-label" style={{ marginBottom: 12 }}>Active Schedules</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="section-label" style={{ marginBottom: 0 }}>Active Schedules</span>
+              {filterCourse && (
+                <button onClick={() => setFilterCourse(null)} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  background: 'rgba(124,106,247,0.15)', border: '1px solid rgba(124,106,247,0.35)',
+                  borderRadius: 'var(--radius-full)', padding: '2px 8px',
+                  color: 'var(--accent)', fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, cursor: 'pointer',
+                }}>
+                  {courses.find(c => c.id === filterCourse)?.code} ×
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setShowFilter(true)} style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                background: filterCourse ? 'rgba(124,106,247,0.15)' : 'var(--surface-xs)',
+                border: `1px solid ${filterCourse ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+                borderRadius: 'var(--radius-full)', padding: '4px 10px',
+                color: filterCourse ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 12,
+                fontFamily: 'Space Grotesk', fontWeight: 600,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                Filter
+              </button>
+              <button onClick={() => setShowSort(true)} style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                background: sortBy !== 'newest' ? 'rgba(124,106,247,0.15)' : 'var(--surface-xs)',
+                border: `1px solid ${sortBy !== 'newest' ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+                borderRadius: 'var(--radius-full)', padding: '4px 10px',
+                color: sortBy !== 'newest' ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 12,
+                fontFamily: 'Space Grotesk', fontWeight: 600,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Sort
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Cohort list */}
         <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 100 }}>
-          {cohorts.length === 0 ? (
+          {visibleCohorts.length === 0 && cohorts.length === 0 ? (
             <div className="card" style={{ padding: 40, textAlign: 'center' }}>
               <div style={{ marginBottom: 12 }}>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="1.5" strokeLinecap="round" style={{ margin: '0 auto' }}>
@@ -244,8 +298,13 @@ export default function AdminDashboard() {
                 </button>
               )}
             </div>
+          ) : visibleCohorts.length === 0 ? (
+            <div className="card" style={{ padding: 24, textAlign: 'center', fontSize: 13, color: 'var(--text-3)' }}>
+              No schedules match the current filter.
+              <button onClick={() => setFilterCourse(null)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, marginLeft: 6 }}>Clear</button>
+            </div>
           ) : (
-            cohorts.map(cohort => (
+            visibleCohorts.map(cohort => (
               <CohortCard
                 key={cohort.id}
                 cohort={cohort}
@@ -288,10 +347,65 @@ export default function AdminDashboard() {
         </div>
       </BottomSheet>
 
+      <BottomSheet isOpen={showSort} onClose={() => setShowSort(false)} title="Sort schedules">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { value: 'newest', label: 'Newest first' },
+            { value: 'oldest', label: 'Oldest first' },
+            { value: 'course', label: 'By course' },
+          ].map(opt => (
+            <button key={opt.value} onClick={() => { setSortBy(opt.value); setShowSort(false) }} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: sortBy === opt.value ? 'rgba(124,106,247,0.12)' : 'var(--surface-xs)',
+              border: `1px solid ${sortBy === opt.value ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+              borderRadius: 'var(--radius-md)', padding: '12px 14px',
+              color: sortBy === opt.value ? 'var(--accent)' : 'var(--text-2)',
+              fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'left',
+            }}>
+              {opt.label}
+              {sortBy === opt.value && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet isOpen={showFilter} onClose={() => setShowFilter(false)} title="Filter by course">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={() => { setFilterCourse(null); setShowFilter(false) }} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: !filterCourse ? 'rgba(124,106,247,0.12)' : 'var(--surface-xs)',
+            border: `1px solid ${!filterCourse ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+            borderRadius: 'var(--radius-md)', padding: '12px 14px',
+            color: !filterCourse ? 'var(--accent)' : 'var(--text-2)',
+            fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'left',
+          }}>
+            All courses
+            {!filterCourse && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+          </button>
+          {uniqueCourseIds.map(cid => {
+            const c = courses.find(x => x.id === cid)
+            if (!c) return null
+            return (
+              <button key={cid} onClick={() => { setFilterCourse(cid); setShowFilter(false) }} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: filterCourse === cid ? 'rgba(124,106,247,0.12)' : 'var(--surface-xs)',
+                border: `1px solid ${filterCourse === cid ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+                borderRadius: 'var(--radius-md)', padding: '12px 14px',
+                color: filterCourse === cid ? 'var(--accent)' : 'var(--text-2)',
+                fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, cursor: 'pointer', textAlign: 'left',
+              }}>
+                {c.code}: {c.name}
+                {filterCourse === cid && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </button>
+            )
+          })}
+        </div>
+      </BottomSheet>
+
       <BottomSheet isOpen={showReset} onClose={() => setShowReset(false)} title="Reset all data?">
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
-            This will permanently delete <strong style={{ color: 'var(--text-1)' }}>{cohorts.length} schedule{cohorts.length !== 1 ? 's' : ''}</strong> and <strong style={{ color: 'var(--text-1)' }}>{claims.length} instructor claim{claims.length !== 1 ? 's' : ''}</strong>.<br />
+            This will permanently delete <strong style={{ color: 'var(--text-1)' }}>{cohorts.length} schedule{cohorts.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{claims.length} instructor claim{claims.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{instructors.length} instructor{instructors.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{modules.length} module{modules.length !== 1 ? 's' : ''}</strong>, and <strong style={{ color: 'var(--text-1)' }}>{courses.length} course{courses.length !== 1 ? 's' : ''}</strong>. Default courses will be restored.<br />
             The app will return to a blank state. This cannot be undone.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
@@ -331,7 +445,7 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
     setAnimating(true)
     setOffset(target)
     setSnapped(target === 0 ? null : target < 0 ? 'left' : 'right')
-    setTimeout(() => setAnimating(false), 250)
+    setTimeout(() => setAnimating(false), 300)
   }
 
   function handleTouchStart(e) {
@@ -350,18 +464,26 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
   function handleTouchEnd() {
     if (startXRef.current === null) return
     startXRef.current = null
-    const moved = offset - baseRef.current
-    if (moved < -36)      snapTo(-ACTION_W)
-    else if (moved > 36)  snapTo(ACTION_W)
-    else if (offset < -ACTION_W / 2) snapTo(-ACTION_W)
-    else if (offset > ACTION_W / 2)  snapTo(ACTION_W)
-    else                  snapTo(0)
+    // From a snapped state, only allow snapping back to center — never jump to opposite side
+    if (snapped === 'left') {
+      snapTo(offset > -ACTION_W / 2 ? 0 : -ACTION_W)
+    } else if (snapped === 'right') {
+      snapTo(offset < ACTION_W / 2 ? 0 : ACTION_W)
+    } else {
+      const moved = offset - baseRef.current
+      if (moved < -30 || offset < -ACTION_W / 2) snapTo(-ACTION_W)
+      else if (moved > 30 || offset > ACTION_W / 2) snapTo(ACTION_W)
+      else snapTo(0)
+    }
   }
 
   function handleCardClick() {
     if (snapped) { snapTo(0); return }
     onClick()
   }
+
+  const leftOpacity  = Math.min(1, Math.max(0, offset / (ACTION_W * 0.4)))
+  const rightOpacity = Math.min(1, Math.max(0, -offset / (ACTION_W * 0.4)))
 
   return (
     <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
@@ -372,6 +494,7 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
         background: 'rgba(124,106,247,0.18)',
         flexDirection: 'column', gap: 4,
         cursor: 'pointer',
+        opacity: leftOpacity,
       }} onClick={onEdit}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -387,6 +510,7 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
         background: 'rgba(239,68,68,0.18)',
         flexDirection: 'column', gap: 4,
         cursor: 'pointer',
+        opacity: rightOpacity,
       }} onClick={onDelete}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -406,7 +530,7 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
           padding: 0, overflow: 'hidden', textAlign: 'left', width: '100%',
           cursor: 'pointer', background: 'var(--surface-sm)',
           transform: `translateX(${offset}px)`,
-          transition: animating ? 'transform 220ms cubic-bezier(0.25,1,0.5,1)' : 'none',
+          transition: animating ? 'transform 300ms cubic-bezier(0.34,1.56,0.64,1)' : 'none',
           position: 'relative', zIndex: 1,
           borderRadius: 'var(--radius-lg)',
         }}
@@ -420,10 +544,15 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
                 {cohort.sections} section{cohort.sections !== 1 ? 's' : ''}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
               {formatDateShort(firstDate)} – {formatDateShort(lastDate)}
               {dayCount > 0 && <> · {dayCount} module{dayCount !== 1 ? 's' : ''}</>}
             </div>
+            {cohort.createdAt && (
+              <div style={{ fontSize: 11, color: 'var(--text-4)', marginBottom: 10 }}>
+                Created {new Date(cohort.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
               {Array.from({ length: cohort.sections }, (_, si) =>
