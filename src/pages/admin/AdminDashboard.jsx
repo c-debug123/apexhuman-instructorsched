@@ -405,7 +405,7 @@ export default function AdminDashboard() {
       <BottomSheet isOpen={showReset} onClose={() => setShowReset(false)} title="Reset all data?">
         <div>
           <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
-            This will permanently delete <strong style={{ color: 'var(--text-1)' }}>{cohorts.length} schedule{cohorts.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{claims.length} instructor claim{claims.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{instructors.length} instructor{instructors.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{modules.length} module{modules.length !== 1 ? 's' : ''}</strong>, and <strong style={{ color: 'var(--text-1)' }}>{courses.length} course{courses.length !== 1 ? 's' : ''}</strong>. Default courses will be restored.<br />
+            This will permanently delete <strong style={{ color: 'var(--text-1)' }}>{cohorts.length} schedule{cohorts.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{claims.length} instructor claim{claims.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{instructors.length} instructor{instructors.length !== 1 ? 's' : ''}</strong>, <strong style={{ color: 'var(--text-1)' }}>{modules.length} module{modules.length !== 1 ? 's' : ''}</strong>, and <strong style={{ color: 'var(--text-1)' }}>{courses.length} course{courses.length !== 1 ? 's' : ''}</strong>.<br />
             The app will return to a blank state. This cannot be undone.
           </div>
           <div style={{ display: 'flex', gap: 10 }}>

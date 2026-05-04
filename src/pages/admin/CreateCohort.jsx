@@ -305,47 +305,44 @@ export default function CreateCohort() {
                       {/* Date + time row */}
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                         <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Date</div>
                           <input
                             type="date"
                             className="input"
                             value={s.date}
                             min={TODAY}
                             onChange={e => setSlotField(i, 'date', e.target.value)}
-                            style={{ fontSize: 14, padding: '9px 12px' }}
+                            style={{ fontSize: 14, padding: '9px 12px', width: '100%' }}
                           />
                         </div>
-                        <div>
+                        <div style={{ flexShrink: 0 }}>
+                          <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Start Time</div>
                           <MilitaryTimePicker
                             value={s.startTime || '09:00'}
                             onChange={v => setSlotField(i, 'startTime', v)}
                           />
                         </div>
                         {endTime && (
-                          <div style={{
-                            display: 'flex', alignItems: 'center', gap: 4,
-                            paddingBottom: 10, flexShrink: 0,
-                          }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 2, flexShrink: 0 }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>
-                              {endTime}
-                            </span>
+                            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{endTime}</span>
                           </div>
                         )}
                       </div>
 
                       {/* Inline hints */}
-                      <div style={{ marginTop: 6, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                        {s.date && (
-                          <span style={{ fontSize: 11, color: weekend ? 'var(--amber)' : 'var(--text-4)' }}>
-                            {formatDateShort(s.date)}{weekend ? ' · weekend' : ''}
-                          </span>
-                        )}
-                        {endTime && s.date && (
-                          <span style={{ fontSize: 11, color: 'var(--text-4)' }}>
-                            {s.startTime} – {endTime}
-                          </span>
-                        )}
-                      </div>
+                      {(s.date || (endTime && s.date)) && (
+                        <div style={{ marginTop: 5, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                          {s.date && (
+                            <span style={{ fontSize: 11, color: weekend ? 'var(--amber)' : 'var(--text-4)' }}>
+                              {formatDateShort(s.date)}{weekend ? ' · weekend' : ''}
+                            </span>
+                          )}
+                          {endTime && s.date && (
+                            <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{s.startTime} – {endTime}</span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Venue */}
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>

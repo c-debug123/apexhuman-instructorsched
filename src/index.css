@@ -98,6 +98,11 @@ body {
 .btn-ghost    { background: transparent; color: var(--text-2); font-family: 'Inter', sans-serif; font-weight: 400; }
 .btn-danger   { background: var(--red-dim); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
 
+/* Prevent iOS zoom on focus — all interactive inputs must be at least 16px */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
 /* Input */
 .input {
   width: 100%; background: var(--surface-sm); border: 1px solid var(--border-md);

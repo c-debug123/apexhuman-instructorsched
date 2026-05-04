@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
-import { COURSES } from '../data/courses'
 
 const AppContext = createContext(null)
 
@@ -12,18 +11,6 @@ function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, elig
 function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, courseId: r.course_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
 
-// ── Seed the 6 built-in courses if the table is empty ────────────────────────
-async function seedCoursesIfEmpty() {
-  const { data, error } = await supabase.from('courses').select('id').limit(1)
-  if (error || (data && data.length > 0)) return
-  const rows = Object.values(COURSES).map(c => ({
-    id: c.id, code: c.code, name: c.name,
-    full_title: c.fullTitle, short_name: c.shortName,
-    color: c.color, num: c.num, track: c.track,
-    days: [], groups: [],
-  }))
-  await supabase.from('courses').insert(rows)
-}
 
 export function AppProvider({ children }) {
   const [modules,       setModules]       = useState([])
@@ -38,7 +25,6 @@ export function AppProvider({ children }) {
   // ── Initial load ─────────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
-      await seedCoursesIfEmpty()
       const [mod, crs, coh, inst, clm, notif] = await Promise.all([
         supabase.from('modules').select('*').order('created_at'),
         supabase.from('courses').select('*').order('num'),
@@ -227,11 +213,7 @@ export function AppProvider({ children }) {
       supabase.from('modules').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
       supabase.from('courses').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
     ])
-    setCohorts([]); setClaims([]); setNotifications([]); setInstructors([]); setModules([])
-    // Re-seed the default courses
-    await seedCoursesIfEmpty()
-    const { data } = await supabase.from('courses').select('*').order('num')
-    setCourses((data || []).map(toCourse))
+    setCohorts([]); setClaims([]); setNotifications([]); setInstructors([]); setModules([]); setCourses([])
   }, [])
 
   return (

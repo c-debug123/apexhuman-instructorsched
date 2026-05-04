@@ -140,9 +140,9 @@ export default function CohortDetail() {
                         )}
                       </div>
                       {(sd?.room || sd?.address) && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6 }}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                          <span style={{ fontSize: 11, color: 'var(--text-4)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                             {[sd.room, sd.address].filter(Boolean).join(' · ')}
                           </span>
                         </div>

@@ -471,7 +471,7 @@ export default function ModuleLibrary() {
       </BottomSheet>
 
       {/* Next step bar */}
-      {(modules || []).length > 0 && !selectMode && (
+      {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !confirmDelete && !showSort && !showBulkDelete && (
         <div style={{
           position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
           left: 0, right: 0, padding: '8px 16px',
