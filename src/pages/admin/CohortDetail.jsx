@@ -235,7 +235,7 @@ export default function CohortDetail() {
                     <div>
                       <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                        {nameClaims.map(cl => `D${cl.day} S${cl.section}`).join(' · ')}
+                        {nameClaims.map(cl => `M${cl.day} S${cl.section}`).join(' · ')}
                       </div>
                     </div>
                   </div>
@@ -252,7 +252,7 @@ export default function CohortDetail() {
         {pendingUnclaim && (
           <div>
             <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 4 }}>
-              {pendingUnclaim.claim?.instructorName} — {course?.name} D{pendingUnclaim.day}, Sec {pendingUnclaim.section}
+              {pendingUnclaim.claim?.instructorName} — {course?.name} M{pendingUnclaim.day}, Sec {pendingUnclaim.section}
             </div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20 }}>Remove this instructor from the slot?</div>
             <div style={{ display: 'flex', gap: 10 }}>

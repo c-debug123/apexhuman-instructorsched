@@ -115,7 +115,7 @@ export default function MySchedule() {
         {pendingUnclaim && (
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
-              {pendingUnclaim.course?.name} — Day {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
+              {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
               {formatDate(pendingUnclaim.date)}<br /><br />
               This slot will become available for other instructors.
             </div>

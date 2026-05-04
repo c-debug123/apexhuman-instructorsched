@@ -64,7 +64,7 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
             textTransform: 'uppercase', letterSpacing: '0.08em',
             color: 'var(--text-3)',
           }}>
-            D{slot.day} · Sec {slot.section}/{slot.sections}
+            M{slot.day} · Sec {slot.section}/{slot.sections}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>

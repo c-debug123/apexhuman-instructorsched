@@ -186,7 +186,7 @@ export default function SlotBrowser() {
               <div style={{ width: 4, height: 40, borderRadius: 2, background: pendingClaim.course?.color, flexShrink: 0 }} />
               <div>
                 <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{pendingClaim.course?.name}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Day {pendingClaim.day} · Section {pendingClaim.section} · {formatDate(pendingClaim.date)}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Module {pendingClaim.day} · Section {pendingClaim.section} · {formatDate(pendingClaim.date)}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingClaim.instructorType}</div>
               </div>
             </div>
@@ -219,7 +219,7 @@ export default function SlotBrowser() {
         {pendingUnclaim && (
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-              {pendingUnclaim.course?.name} — Day {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
+              {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
               {formatDate(pendingUnclaim.date)}<br /><br />
               This slot will become available for other instructors.
             </div>

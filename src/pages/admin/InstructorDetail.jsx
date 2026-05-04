@@ -212,7 +212,7 @@ export default function InstructorDetail() {
                                 {course?.name ?? 'Unknown course'}
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                                Day {cl.day} · Section {cl.section} · {cl.date}
+                                Module {cl.day} · Section {cl.section} · {cl.date}
                               </div>
                             </div>
                             <div style={{ flexShrink: 0, background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.25)', borderRadius: 'var(--radius-full)', padding: '2px 8px', fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -241,7 +241,7 @@ export default function InstructorDetail() {
                                 {course?.name ?? 'Unknown course'}
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                                Day {cl.day} · Section {cl.section} · {cl.date}
+                                Module {cl.day} · Section {cl.section} · {cl.date}
                               </div>
                             </div>
                             <div style={{ flexShrink: 0, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '2px 8px', fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>

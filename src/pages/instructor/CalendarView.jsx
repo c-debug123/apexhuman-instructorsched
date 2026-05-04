@@ -28,32 +28,59 @@ function toDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function getDayData(dateStr, cohorts, claims, myName, courses) {
+function getDayData(dateStr, cohorts, claims, myName, courses, modules, eligibleGroups) {
+  function isEligible(mod) {
+    if (!mod) return true
+    if (!eligibleGroups) return true
+    if (eligibleGroups.size === 0) return false
+    return (mod.tags || []).some(tag => eligibleGroups.has(tag))
+  }
+
   let mySlots = []
   let openSlots = []
   cohorts.forEach(cohort => {
     const d0 = new Date(cohort.startDate + 'T00:00:00')
     const d = new Date(dateStr + 'T00:00:00')
     const diff = Math.round((d - d0) / 86400000)
-    if (diff < 0 || diff > 4) return
+    const totalDays = (course => course?.days?.length || 5)(courses.find(c => c.id === cohort.courseId))
+    if (diff < 0 || diff >= totalDays) return
     const day = diff + 1
     const course = courses.find(c => c.id === cohort.courseId)
+    const dayDef = course?.days?.[diff]
+    const mod = dayDef?.moduleId ? modules.find(m => m.id === dayDef.moduleId) : null
+    const sd = (cohort.slotDates || [])[diff]
+    const moduleName = mod?.name || dayDef?.label || null
+    const startTime = sd?.startTime || null
+
     for (let section = 1; section <= cohort.sections; section++) {
       const claim = claims.find(cl => cl.cohortId === cohort.id && cl.day === day && cl.section === section)
+      const slot = { cohort, day, totalDays, section, claim: claim || null, course, mod, moduleName, startTime }
       if (claim) {
-        if (claim.instructorName === myName) mySlots.push({ cohort, day, section, claim, course })
-      } else {
-        openSlots.push({ cohort, day, section, course })
+        if (claim.instructorName === myName) mySlots.push(slot)
+      } else if (isEligible(mod)) {
+        openSlots.push(slot)
       }
     }
   })
+
+  const byTime = (a, b) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99') || a.section - b.section
+  mySlots.sort(byTime)
+  openSlots.sort(byTime)
   return { mySlots, openSlots }
 }
 
 export default function InstructorCalendarView() {
   const navigate = useNavigate()
-  const { cohorts, claims, courses, removeClaim, addClaim } = useApp()
+  const { cohorts, claims, courses, modules, instructors, removeClaim, addClaim } = useApp()
   const name = localStorage.getItem('apex_instructor_name') || ''
+  const instructorId = localStorage.getItem('apex_instructor_id') || null
+
+  const eligibleGroups = useMemo(() => {
+    if (!instructorId) return null
+    const inst = instructors.find(i => i.id === instructorId)
+    if (!inst) return null
+    return new Set(inst.eligibleGroups || [])
+  }, [instructorId, instructors])
 
   const today = new Date()
   today.setHours(0,0,0,0)
@@ -84,11 +111,11 @@ export default function InstructorCalendarView() {
       else if (offset >= daysInMonth) { date = new Date(year, month + 1, offset - daysInMonth + 1); inMonth = false }
       else { date = new Date(year, month, offset + 1); inMonth = true }
       const dateStr = toDateStr(date)
-      const { mySlots, openSlots } = getDayData(dateStr, cohorts, claims, name, courses)
+      const { mySlots, openSlots } = getDayData(dateStr, cohorts, claims, name, courses, modules, eligibleGroups)
       grid.push({ date, dateStr, inMonth, mySlots, openSlots })
     }
     return grid
-  }, [monthDate, cohorts, claims, name])
+  }, [monthDate, cohorts, claims, name, courses, modules, eligibleGroups])
 
   const myClaimsThisMonth = useMemo(() => {
     const monthStr = `${monthDate.getFullYear()}-${String(monthDate.getMonth()+1).padStart(2,'0')}`
@@ -100,7 +127,7 @@ export default function InstructorCalendarView() {
     })
   }, [monthDate, cohorts, claims, name])
 
-  const selectedData = selectedDay ? getDayData(selectedDay, cohorts, claims, name, courses) : { mySlots: [], openSlots: [] }
+  const selectedData = selectedDay ? getDayData(selectedDay, cohorts, claims, name, courses, modules, eligibleGroups) : { mySlots: [], openSlots: [] }
   const selectedDateLabel = selectedDay
     ? new Date(selectedDay + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     : ''
@@ -299,8 +326,10 @@ export default function InstructorCalendarView() {
                               {s.course ? `${s.course.code}: ${s.course.name}` : s.cohort.courseId}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                              Day {s.day} of 5 · Section {s.section}
+                              Module {s.day} of {s.totalDays} · Section {s.section}
+                              {s.startTime && <span style={{ marginLeft: 6, color: 'var(--teal)' }}>{s.startTime}</span>}
                             </div>
+                            {s.moduleName && <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{s.moduleName}</div>}
                           </div>
                           <button
                             onClick={() => setPendingUnclaim(s)}
@@ -334,8 +363,10 @@ export default function InstructorCalendarView() {
                               {s.course ? `${s.course.code}: ${s.course.name}` : s.cohort.courseId}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                              Day {s.day} of 5 · Section {s.section}
+                              Module {s.day} of {s.totalDays} · Section {s.section}
+                              {s.startTime && <span style={{ marginLeft: 6, color: 'var(--teal)' }}>{s.startTime}</span>}
                             </div>
+                            {s.moduleName && <div style={{ fontSize: 11, color: 'var(--text-4)', marginTop: 2 }}>{s.moduleName}</div>}
                           </div>
                           <button
                             onClick={() => setPendingClaim({ ...s, dateStr: selectedDay })}
@@ -370,7 +401,7 @@ export default function InstructorCalendarView() {
           <div>
             <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
               {pendingUnclaim.course ? `${pendingUnclaim.course.code}: ${pendingUnclaim.course.name}` : ''}<br />
-              Day {pendingUnclaim.day} of 5 · Section {pendingUnclaim.section}<br />
+              Module {pendingUnclaim.day} of {pendingUnclaim.totalDays ?? 5} · Section {pendingUnclaim.section}<br />
               {formatDate(selectedDay || '')}<br /><br />
               This slot will become available for other instructors.
             </div>
@@ -406,7 +437,7 @@ export default function InstructorCalendarView() {
                       {pendingClaim.course ? `${pendingClaim.course.code}: ${pendingClaim.course.name}` : ''}
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--text-3)' }}>
-                      Day {pendingClaim.day} of 5 · Section {pendingClaim.section} · {formatDate(selectedDay || '')}
+                      Module {pendingClaim.day} of {pendingClaim.totalDays ?? 5} · Section {pendingClaim.section} · {formatDate(selectedDay || '')}
                     </div>
                   </div>
                 </div>
