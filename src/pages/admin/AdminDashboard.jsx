@@ -12,8 +12,8 @@ function PlusIcon() {
 function ResetIcon() {
   return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
 }
-function ShareIcon() {
-  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+function ExternalLinkIcon() {
+  return <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
 }
 function ChevronRight() {
   return <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -68,21 +68,13 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
   const { cohorts, courses, modules, claims, instructors, resetAll, deleteCohort } = useApp()
   const [showReset, setShowReset]       = useState(false)
-  const [copied, setCopied]             = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [sortBy, setSortBy]             = useState('newest')
   const [filterCourse, setFilterCourse] = useState(null)
   const [showSort, setShowSort]         = useState(false)
   const [showFilter, setShowFilter]     = useState(false)
 
-  function copyInstructorLink() {
-    navigator.clipboard.writeText(INSTRUCTOR_URL).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
-  const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.courseId)?.days?.length || 0) * c.sections, 0)
+const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.courseId)?.days?.length || 0) * c.sections, 0)
   const filled      = claims.length
   const open        = Math.max(0, totalSlots - filled)
 
@@ -131,18 +123,16 @@ export default function AdminDashboard() {
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <button
-                onClick={copyInstructorLink}
+                onClick={() => window.open(INSTRUCTOR_URL, '_blank')}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(45,212,191,0.12)',
-                  border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : 'rgba(45,212,191,0.3)'}`,
+                  background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
                   borderRadius: 'var(--radius-full)', padding: '4px 10px',
-                  color: copied ? 'var(--green)' : 'var(--teal)',
-                  fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
+                  color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
                   cursor: 'pointer', transition: 'all 150ms',
                 }}
               >
-                <ShareIcon /> {copied ? 'Copied!' : 'Instructor Link'}
+                <ExternalLinkIcon /> Instructor Link
               </button>
               {(cohorts.length > 0 || claims.length > 0 || modules.length > 0 || instructors.length > 0 || courses.some(c => c.days?.length > 0)) && (
                 <button
