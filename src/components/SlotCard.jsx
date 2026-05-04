@@ -69,8 +69,24 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{formatDate(slot.date)}</span>
-          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{slot.instructorType}</span>
+          {slot.moduleName && (
+            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{slot.moduleName}</span>
+          )}
         </div>
+        {slot.moduleTags?.length > 0 && (
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+            {slot.moduleTags.map(tag => (
+              <span key={tag} style={{
+                fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.05em',
+                background: 'rgba(124,106,247,0.12)', border: '1px solid rgba(124,106,247,0.25)',
+                borderRadius: 'var(--radius-full)', padding: '2px 7px', color: 'var(--purple, #7c6af7)',
+              }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         {isTaken && (
           <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-3)' }}>
             {slot.claim.instructorName}

@@ -12,13 +12,12 @@ export default function SlotBrowser() {
   const name        = localStorage.getItem('apex_instructor_name') || ''
   const instructorId = localStorage.getItem('apex_instructor_id') || null
 
-  const [dayFilter, setDayFilter]       = useState(null)
   const [courseFilter, setCourseFilter] = useState(null)
   const [pendingClaim, setPendingClaim] = useState(null)
   const [conflictSlot, setConflictSlot] = useState(null)
   const [pendingUnclaim, setPendingUnclaim] = useState(null)
 
-  const slots = useSlots({ dayFilter, courseFilter })
+  const slots = useSlots({ courseFilter })
 
   // Derive this instructor's eligible groups
   const eligibleGroups = useMemo(() => {
@@ -94,34 +93,27 @@ export default function SlotBrowser() {
               </div>
             </div>
 
-            {/* Filters */}
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8 }}>
-              <button
-                className={`filter-pill ${dayFilter === null && courseFilter === null ? 'on-instructor' : ''}`}
-                onClick={() => { setDayFilter(null); setCourseFilter(null) }}
-              >
-                All
-              </button>
-              {[1, 2, 3, 4, 5].map(d => (
-                <button
-                  key={d}
-                  className={`filter-pill ${dayFilter === d ? 'on-instructor' : ''}`}
-                  onClick={() => setDayFilter(dayFilter === d ? null : d)}
+            {/* Course filter dropdown */}
+            {courses.length > 0 && (
+              <div style={{ paddingBottom: 8 }}>
+                <select
+                  value={courseFilter || ''}
+                  onChange={e => setCourseFilter(e.target.value || null)}
+                  style={{
+                    width: '100%', height: 36, padding: '0 10px', boxSizing: 'border-box',
+                    background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
+                    borderRadius: 'var(--radius-md)', color: courseFilter ? 'var(--text-1)' : 'var(--text-3)',
+                    fontFamily: 'Inter, sans-serif', fontSize: 13, outline: 'none',
+                    WebkitAppearance: 'none', appearance: 'none',
+                  }}
                 >
-                  D{d}
-                </button>
-              ))}
-              {courses.map(c => (
-                <button
-                  key={c.id}
-                  className={`filter-pill ${courseFilter === c.id ? 'on-instructor' : ''}`}
-                  onClick={() => setCourseFilter(courseFilter === c.id ? null : c.id)}
-                >
-                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, display: 'inline-block', marginRight: 2 }} />
-                  {c.code}{c.shortName ? `: ${c.shortName}` : ''}
-                </button>
-              ))}
-            </div>
+                  <option value=''>All courses</option>
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.code}{c.shortName ? `: ${c.shortName}` : c.name ? `: ${c.name}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -129,13 +121,13 @@ export default function SlotBrowser() {
           {dates.length === 0 ? (
             <div className="card" style={{ padding: 40, textAlign: 'center' }}>
               <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-2)', marginBottom: 6 }}>
-                {dayFilter || courseFilter ? 'No slots match your filters.' : 'No open slots right now.'}
+                {courseFilter ? 'No slots match your filter.' : 'No open slots right now.'}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: dayFilter || courseFilter ? 16 : 0 }}>
-                {dayFilter || courseFilter ? 'Try clearing filters to see more.' : 'Check back later.'}
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: courseFilter ? 16 : 0 }}>
+                {courseFilter ? 'Try clearing the filter to see more.' : 'Check back later.'}
               </div>
-              {(dayFilter || courseFilter) && (
-                <button className="btn btn-ghost" onClick={() => { setDayFilter(null); setCourseFilter(null) }}>Clear Filters</button>
+              {courseFilter && (
+                <button className="btn btn-ghost" onClick={() => setCourseFilter(null)}>Clear Filter</button>
               )}
             </div>
           ) : (
