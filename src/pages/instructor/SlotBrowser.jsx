@@ -60,6 +60,7 @@ export default function SlotBrowser() {
       date: pendingClaim.date,
       instructorType: pendingClaim.instructorType,
       instructorName: name,
+      instructorId: instructorId || null,
       claimedAt: new Date().toISOString(),
     }
     addClaim(claim)
