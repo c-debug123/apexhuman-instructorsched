@@ -71,22 +71,26 @@ function getOverlapIndices(slotDates, courseSlots, modules) {
 const HOURS   = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 const MINUTES = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']
 
+const FIELD_H = 36
+
 function MilitaryTimePicker({ value, onChange }) {
   const [hh, mm] = value ? value.split(':') : ['09', '00']
   function update(newH, newM) { onChange(`${newH}:${newM}`) }
   const selStyle = {
     background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
     borderRadius: 'var(--radius-md)', color: 'var(--text-1)',
-    fontSize: 14, fontFamily: 'Space Grotesk', fontWeight: 600,
-    padding: '9px 6px', cursor: 'pointer', appearance: 'none', textAlign: 'center',
+    fontFamily: 'Space Grotesk', fontWeight: 600,
+    height: FIELD_H, width: 48, padding: 0, boxSizing: 'border-box',
+    cursor: 'pointer', appearance: 'none', WebkitAppearance: 'none',
+    textAlign: 'center', textAlignLast: 'center',
   }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%' }}>
-      <select value={hh} onChange={e => update(e.target.value, mm)} style={{ ...selStyle, width: 52 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <select value={hh} onChange={e => update(e.target.value, mm)} style={selStyle}>
         {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
       </select>
       <span style={{ color: 'var(--text-3)', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 14 }}>:</span>
-      <select value={mm} onChange={e => update(hh, e.target.value)} style={{ ...selStyle, width: 52 }}>
+      <select value={mm} onChange={e => update(hh, e.target.value)} style={selStyle}>
         {MINUTES.map(m => <option key={m} value={m}>{m}</option>)}
       </select>
     </div>
@@ -308,11 +312,16 @@ export default function CreateCohort() {
                           <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700, color: 'var(--text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Date</div>
                           <input
                             type="date"
-                            className="input"
                             value={s.date}
                             min={TODAY}
                             onChange={e => setSlotField(i, 'date', e.target.value)}
-                            style={{ fontSize: 14, padding: '9px 12px', width: '100%' }}
+                            style={{
+                              width: '100%', height: FIELD_H, boxSizing: 'border-box',
+                              padding: '0 10px', outline: 'none',
+                              background: 'var(--surface-xs)', border: '1px solid var(--border-md)',
+                              borderRadius: 'var(--radius-md)', color: 'var(--text-1)',
+                              fontFamily: 'Inter, sans-serif', appearance: 'none', WebkitAppearance: 'none',
+                            }}
                           />
                         </div>
                         <div style={{ flexShrink: 0 }}>
@@ -323,7 +332,7 @@ export default function CreateCohort() {
                           />
                         </div>
                         {endTime && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 2, flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{endTime}</span>
                           </div>
@@ -345,14 +354,14 @@ export default function CreateCohort() {
                       )}
 
                       {/* Venue */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 8 }}>
                         <input
                           type="text"
                           className="input"
                           placeholder="Room (optional)"
                           value={s.room || ''}
                           onChange={e => setVenueField(i, 'room', e.target.value)}
-                          style={{ fontSize: 13, padding: '8px 12px' }}
+                          style={{ height: FIELD_H, padding: '0 10px', boxSizing: 'border-box' }}
                         />
                         <input
                           type="text"
@@ -360,7 +369,7 @@ export default function CreateCohort() {
                           placeholder="Address (optional)"
                           value={s.address || ''}
                           onChange={e => setVenueField(i, 'address', e.target.value)}
-                          style={{ fontSize: 13, padding: '8px 12px' }}
+                          style={{ height: FIELD_H, padding: '0 10px', boxSizing: 'border-box' }}
                         />
                       </div>
                       {hasConflict && (
