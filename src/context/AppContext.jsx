@@ -152,14 +152,28 @@ export function AppProvider({ children }) {
 
   // ── Claims ────────────────────────────────────────────────────────────────────
   const addClaim = useCallback(async (cl) => {
+    // Optimistic update — show immediately, roll back on failure
+    setClaims(prev => [...prev, cl])
     const row = { id: cl.id, cohort_id: cl.cohortId, course_id: cl.courseId || null, day: cl.day, section: cl.section, date: cl.date || null, instructor_type: cl.instructorType || null, instructor_id: cl.instructorId || null, instructor_name: cl.instructorName }
     const { data, error } = await supabase.from('claims').insert(row).select().single()
-    if (!error && data) setClaims(prev => [...prev, toClaim(data)])
+    if (error) {
+      console.error('addClaim failed:', error)
+      setClaims(prev => prev.filter(c => c.id !== cl.id))
+    } else if (data) {
+      setClaims(prev => prev.map(c => c.id === cl.id ? toClaim(data) : c))
+    }
   }, [])
 
   const removeClaim = useCallback(async (id) => {
+    // Optimistic update — remove immediately, restore on failure
+    setClaims(prev => prev.filter(cl => cl.id !== id))
     const { error } = await supabase.from('claims').delete().eq('id', id)
-    if (!error) setClaims(prev => prev.filter(cl => cl.id !== id))
+    if (error) {
+      console.error('removeClaim failed:', error)
+      // Re-fetch claims to restore state
+      const { data } = await supabase.from('claims').select('*').order('created_at')
+      if (data) setClaims(data.map(toClaim))
+    }
   }, [])
 
   // ── Instructors ───────────────────────────────────────────────────────────────
