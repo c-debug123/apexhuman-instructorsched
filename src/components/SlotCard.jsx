@@ -87,11 +87,6 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
             ))}
           </div>
         )}
-        {isTaken && (
-          <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-3)' }}>
-            {slot.claim.instructorName}
-          </div>
-        )}
       </div>
 
       {/* Action */}
