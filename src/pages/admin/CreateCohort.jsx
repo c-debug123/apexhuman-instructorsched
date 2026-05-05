@@ -228,25 +228,12 @@ function MilitaryTimePicker({ value, onChange }) {
 
 // ── Duplicate check ───────────────────────────────────────────────────────────
 
-function findDuplicateCohort(cohorts, courseId, slotDates) {
-  if (!courseId || !slotDates.some(s => s.date)) return null
-  const newDates = slotDates.map(s => s.date).filter(Boolean)
-  if (newDates.length === 0) return null
-  const newFirst = newDates[0]
-  const newLast  = newDates[newDates.length - 1]
-  return cohorts.find(c => {
-    if (c.courseId !== courseId) return false
-    const existing = c.slotDates?.map(s => s.date).filter(Boolean) || []
-    if (existing.length === 0) return false
-    return existing[0] <= newLast && existing[existing.length - 1] >= newFirst
-  }) || null
-}
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function CreateCohort() {
   const navigate = useNavigate()
-  const { courses, modules, cohorts, addCohort } = useApp()
+  const { courses, modules, addCohort } = useApp()
 
   const [courseId,  setCourseId]  = useState('')
   const [sections,  setSections]  = useState(1)
@@ -295,11 +282,10 @@ export default function CreateCohort() {
 
   const overlapIndices     = getOverlapIndices(slotDates, courseSlots, modules)
   const precedenceErrors   = getPrecedenceErrors(slotDates, courseSlots, modules)
-  const duplicateCohort    = findDuplicateCohort(cohorts, courseId, slotDates)
   const hasOverlap         = overlapIndices.size > 0
   const hasPrecedenceError = precedenceErrors.size > 0
   const allDatesSet        = slotDates.length > 0 && slotDates.every(s => !!s.date)
-  const canCreate          = !!courseId && allDatesSet && !hasOverlap && !hasPrecedenceError && !duplicateCohort
+  const canCreate          = !!courseId && allDatesSet && !hasOverlap && !hasPrecedenceError
 
   function handleCreate() {
     addCohort({ id: crypto.randomUUID(), courseId, startDate: slotDates[0]?.date || TODAY, sections, slotDates })
@@ -366,16 +352,6 @@ export default function CreateCohort() {
               </div>
             )}
           </div>
-
-          {/* Duplicate warning */}
-          {duplicateCohort && (
-            <div style={{ padding: '12px 14px', background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              <span style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>
-                A schedule for this course already exists with overlapping dates. Delete the existing one first, or choose different dates.
-              </span>
-            </div>
-          )}
 
           {selectedCourse && courseSlots.length === 0 && (
             <div style={{ padding: '12px 14px', background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--amber)' }}>
@@ -512,7 +488,6 @@ export default function CreateCohort() {
             <button className="btn btn-primary" disabled={!canCreate} onClick={handleCreate} style={{ width: '100%' }}>
               {canCreate
                 ? `Create Schedule · ${courseSlots.length} modules, ${sections} section${sections !== 1 ? 's' : ''}`
-                : duplicateCohort ? 'Duplicate schedule — choose different dates'
                 : hasOverlap ? 'Resolve time overlaps to continue'
                 : hasPrecedenceError ? 'Modules must be scheduled in order'
                 : 'Set a date for each module to continue'}
