@@ -89,13 +89,14 @@ let mapsPromise = null
 function loadGoogleMaps() {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   if (!key) return Promise.resolve(false)
-  if (window.google?.maps?.places) return Promise.resolve(true)
+  if (window.google?.maps?.places?.AutocompleteSuggestion) return Promise.resolve(true)
   if (mapsPromise) return mapsPromise
   mapsPromise = new Promise(resolve => {
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async&v=weekly`
+    script.async = true
     script.onload = () => resolve(true)
-    script.onerror = () => resolve(false)
+    script.onerror = () => { mapsPromise = null; resolve(false) }
     document.head.appendChild(script)
   })
   return mapsPromise
@@ -106,20 +107,21 @@ function loadGoogleMaps() {
 function AddressAutocomplete({ value, onChange, placeholder, height }) {
   const [suggestions, setSuggestions] = useState([])
   const [open, setOpen] = useState(false)
-  const [mapsReady, setMapsReady] = useState(!!window.google?.maps?.places)
-  const serviceRef = useRef(null)
+  const [mapsReady, setMapsReady] = useState(false)
   const debounceRef = useRef(null)
 
   useEffect(() => {
-    if (mapsReady) return
-    loadGoogleMaps().then(ok => { if (ok) setMapsReady(true) })
-  }, [mapsReady])
+    loadGoogleMaps().then(ok => setMapsReady(ok))
+  }, [])
 
-  function getService() {
-    if (!serviceRef.current && window.google?.maps?.places) {
-      serviceRef.current = new window.google.maps.places.AutocompleteService()
+  async function fetchSuggestions(input) {
+    try {
+      const { suggestions: results } = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({ input })
+      setSuggestions((results || []).slice(0, 5))
+      setOpen((results || []).length > 0)
+    } catch {
+      setSuggestions([]); setOpen(false)
     }
-    return serviceRef.current
   }
 
   function handleInput(e) {
@@ -127,18 +129,12 @@ function AddressAutocomplete({ value, onChange, placeholder, height }) {
     onChange(v)
     clearTimeout(debounceRef.current)
     if (v.length < 3 || !mapsReady) { setSuggestions([]); setOpen(false); return }
-    debounceRef.current = setTimeout(() => {
-      const svc = getService()
-      if (!svc) return
-      svc.getPlacePredictions({ input: v }, (preds, status) => {
-        if (status === 'OK' && preds) { setSuggestions(preds.slice(0, 5)); setOpen(true) }
-        else { setSuggestions([]); setOpen(false) }
-      })
-    }, 280)
+    debounceRef.current = setTimeout(() => fetchSuggestions(v), 280)
   }
 
-  function handleSelect(description) {
-    onChange(description)
+  function handleSelect(pred) {
+    const text = pred.placePrediction?.text?.toString() || pred.placePrediction?.mainText?.toString() || ''
+    onChange(text)
     setSuggestions([])
     setOpen(false)
   }
@@ -161,36 +157,41 @@ function AddressAutocomplete({ value, onChange, placeholder, height }) {
           borderRadius: 'var(--radius-sm)', marginTop: 2, overflow: 'hidden',
           boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
         }}>
-          {suggestions.map((pred, idx) => (
-            <button
-              key={pred.place_id || idx}
-              type="button"
-              onMouseDown={() => handleSelect(pred.description)}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10,
-                padding: '9px 12px', background: 'transparent', border: 'none',
-                borderBottom: idx < suggestions.length - 1 ? '1px solid var(--border-dim)' : 'none',
-                cursor: 'pointer', textAlign: 'left',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-xs)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 3 }}>
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                <circle cx="12" cy="10" r="3"/>
-              </svg>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontFamily: 'Space Grotesk', fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {pred.structured_formatting?.main_text || pred.description}
-                </div>
-                {pred.structured_formatting?.secondary_text && (
-                  <div style={{ fontSize: 11, color: 'var(--text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {pred.structured_formatting.secondary_text}
+          {suggestions.map((pred, idx) => {
+            const pp = pred.placePrediction
+            const main = pp?.mainText?.toString() || pp?.text?.toString() || ''
+            const secondary = pp?.secondaryText?.toString() || ''
+            return (
+              <button
+                key={pp?.placeId || idx}
+                type="button"
+                onMouseDown={() => handleSelect(pred)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'flex-start', gap: 10,
+                  padding: '9px 12px', background: 'transparent', border: 'none',
+                  borderBottom: idx < suggestions.length - 1 ? '1px solid var(--border-dim)' : 'none',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-xs)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 3 }}>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontFamily: 'Space Grotesk', fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {main}
                   </div>
-                )}
-              </div>
-            </button>
-          ))}
+                  {secondary && (
+                    <div style={{ fontSize: 11, color: 'var(--text-4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {secondary}
+                    </div>
+                  )}
+                </div>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
