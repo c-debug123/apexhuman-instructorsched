@@ -71,9 +71,9 @@ function getDayData(dateStr, cohorts, claims, myName, courses, modules, eligible
 
 export default function InstructorCalendarView() {
   const navigate = useNavigate()
-  const { cohorts, claims, courses, modules, instructors, removeClaim, addClaim } = useApp()
-  const name = localStorage.getItem('apex_instructor_name') || ''
-  const instructorId = localStorage.getItem('apex_instructor_id') || null
+  const { cohorts, claims, courses, modules, instructors, removeClaim, addClaim, currentInstructor } = useApp()
+  const name         = currentInstructor?.name || ''
+  const instructorId = currentInstructor?.id || null
 
   const eligibleGroups = useMemo(() => {
     if (!instructorId) return null

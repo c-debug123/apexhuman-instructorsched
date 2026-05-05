@@ -5,11 +5,6 @@ import SignIn from './pages/instructor/SignIn'
 import SlotBrowser from './pages/instructor/SlotBrowser'
 import MySchedule from './pages/instructor/MySchedule'
 
-function InstructorGate() {
-  const name = localStorage.getItem('apex_instructor_name')
-  return name ? <Navigate to="/schedule/slots" replace /> : <SignIn />
-}
-
 function LoadingScreen() {
   return (
     <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
@@ -21,6 +16,18 @@ function LoadingScreen() {
   )
 }
 
+function InstructorGate() {
+  const { currentInstructor, authLoading } = useApp()
+  if (authLoading) return <LoadingScreen />
+  return currentInstructor ? <Navigate to="/schedule/slots" replace /> : <SignIn />
+}
+
+function Protected({ children }) {
+  const { currentInstructor, authLoading } = useApp()
+  if (authLoading) return <LoadingScreen />
+  return currentInstructor ? children : <Navigate to="/schedule" replace />
+}
+
 function InstructorRoutes() {
   const { isLoading } = useApp()
   if (isLoading) return <LoadingScreen />
@@ -28,9 +35,9 @@ function InstructorRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/schedule" replace />} />
       <Route path="/schedule" element={<InstructorGate />} />
-      <Route path="/schedule/slots" element={<SlotBrowser />} />
-      <Route path="/schedule/calendar" element={<InstructorCalendarView />} />
-      <Route path="/schedule/mine" element={<MySchedule />} />
+      <Route path="/schedule/slots"    element={<Protected><SlotBrowser /></Protected>} />
+      <Route path="/schedule/calendar" element={<Protected><InstructorCalendarView /></Protected>} />
+      <Route path="/schedule/mine"     element={<Protected><MySchedule /></Protected>} />
       <Route path="*" element={<Navigate to="/schedule" replace />} />
     </Routes>
   )

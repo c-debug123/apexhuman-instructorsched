@@ -1,6 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
+// ── Auth helpers ───────────────────────────────────────────────────────────────
+async function resolveInstructor(email) {
+  if (!email) return null
+  const { data } = await supabase
+    .from('instructors')
+    .select('*')
+    .ilike('email', email)
+    .single()
+  return data ? toInstructor(data) : null
+}
+
 const AppContext = createContext(null)
 
 // ── snake_case → camelCase transforms ─────────────────────────────────────────
@@ -20,6 +31,9 @@ export function AppProvider({ children }) {
   const [instructors,   setInstructors]   = useState([])
   const [notifications, setNotifications] = useState([])
   const [isLoading,     setIsLoading]     = useState(true)
+  const [currentInstructor, setCurrentInstructor] = useState(null)
+  const [authLoading,   setAuthLoading]   = useState(true)
+  const [authError,     setAuthError]     = useState(null)
   const channelRef = useRef(null)
 
   // ── Initial load ─────────────────────────────────────────────────────────────
@@ -42,6 +56,43 @@ export function AppProvider({ children }) {
       setIsLoading(false)
     }
     load()
+  }, [])
+
+  // ── Auth ─────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!session?.user) {
+        setCurrentInstructor(null)
+        setAuthLoading(false)
+        return
+      }
+      const inst = await resolveInstructor(session.user.email)
+      if (inst) {
+        setCurrentInstructor(inst)
+        setAuthError(null)
+      } else {
+        await supabase.auth.signOut()
+        setCurrentInstructor(null)
+        setAuthError('Your Google account is not on the instructor roster. Contact your administrator to be added.')
+      }
+      setAuthLoading(false)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const signInWithGoogle = useCallback(async () => {
+    setAuthError(null)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/schedule/slots' },
+    })
+    if (error) setAuthError(error.message)
+  }, [])
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut()
+    setCurrentInstructor(null)
+    setAuthError(null)
   }, [])
 
   // ── Realtime: notifications + cohorts (new slots alert) ──────────────────────
@@ -233,6 +284,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       isLoading,
+      currentInstructor, authLoading, authError, signInWithGoogle, signOut,
       modules, courses, cohorts, claims, instructors, notifications,
       addModule, updateModule, deleteModule,
       addCourse, updateCourse, deleteCourse,

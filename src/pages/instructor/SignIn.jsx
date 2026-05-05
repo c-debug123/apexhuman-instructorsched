@@ -1,49 +1,23 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 
-export default function SignIn() {
-  const navigate = useNavigate()
-  const { instructors } = useApp()
-  const [name, setName] = useState('')
-  const [error, setError] = useState('')
-
-  // Instructors already in the roster — quick pick
-  const rosterNames = useMemo(
-    () => instructors.map(i => ({ id: i.id, name: i.name })).sort((a, b) => a.name.localeCompare(b.name)),
-    [instructors]
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
   )
+}
 
-  function signIn(instructorName, instructorId) {
-    localStorage.setItem('apex_instructor_name', instructorName)
-    if (instructorId) localStorage.setItem('apex_instructor_id', instructorId)
-    else localStorage.removeItem('apex_instructor_id')
-    navigate('/schedule/slots')
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault()
-    const trimmed = name.trim()
-    if (trimmed.length < 2) return
-    // Try to match to roster (case-insensitive)
-    const match = instructors.find(i => i.name.toLowerCase() === trimmed.toLowerCase())
-    if (match) {
-      signIn(match.name, match.id)
-    } else {
-      // Allow sign-in but warn they won't see any slots if roster-based eligibility is enforced
-      setError('This name is not on the instructor roster. You can still sign in, but no slots may be available to claim.')
-    }
-  }
-
-  function handleForceSignIn() {
-    const trimmed = name.trim()
-    if (trimmed.length < 2) return
-    signIn(trimmed, null)
-  }
+export default function SignIn() {
+  const { signInWithGoogle, authError, authLoading } = useApp()
 
   return (
-    <div className="instructor-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100svh', padding: '24px 24px' }}>
-      <div className="z1" style={{ width: '100%', maxWidth: 400 }}>
+    <div className="instructor-bg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100svh', padding: '24px' }}>
+      <div className="z1" style={{ width: '100%', maxWidth: 380 }}>
+
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 48 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -61,81 +35,48 @@ export default function SignIn() {
           </div>
         </div>
 
-        {/* Roster quick-pick */}
-        {rosterNames.length > 0 && (
-          <div className="card" style={{ padding: '16px 20px', marginBottom: 12 }}>
-            <div style={{ fontFamily: 'Space Grotesk', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 12 }}>
-              Sign in as
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {rosterNames.map(inst => (
-                <button
-                  key={inst.id}
-                  onClick={() => signIn(inst.name, inst.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--surface-sm)', border: '1px solid var(--border)', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'background 150ms, border-color 150ms' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--teal-dim)'; e.currentTarget.style.borderColor = 'var(--teal-border)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-sm)'; e.currentTarget.style.borderColor = 'var(--border)' }}
-                >
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: 'var(--teal-dim)', border: '1px solid var(--teal-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 13, color: 'var(--teal)' }}>
-                    {inst.name[0].toUpperCase()}
-                  </div>
-                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', flex: 1 }}>{inst.name}</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Manual entry */}
-        <div className="card" style={{ padding: 28 }}>
-          <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', marginBottom: 6 }}>
-            {rosterNames.length > 0 ? 'Or enter your name' : 'Welcome'}
+        {/* Sign-in card */}
+        <div className="card" style={{ padding: 32 }}>
+          <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', marginBottom: 8 }}>
+            Instructor sign-in
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
-            Enter your name to see and claim available teaching slots.
+          <p style={{ fontSize: 14, color: 'var(--text-3)', marginBottom: 28, lineHeight: 1.5 }}>
+            Sign in with the Google account registered to your instructor profile.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: error ? 12 : 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-3)', marginBottom: 8, fontFamily: 'Space Grotesk', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Your name
-              </label>
-              <input
-                className="input"
-                type="text"
-                placeholder="Full name"
-                autoCapitalize="words"
-                autoFocus={rosterNames.length === 0}
-                value={name}
-                onChange={e => { setName(e.target.value); setError('') }}
-              />
-            </div>
-
-            {error && (
-              <div style={{ marginBottom: 16, padding: '10px 14px', background: 'var(--amber-dim)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-sm)' }}>
-                <p style={{ fontSize: 13, color: 'var(--amber)', marginBottom: 10, lineHeight: 1.5 }}>{error}</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button type="button" className="btn btn-ghost" style={{ flex: 1, fontSize: 12 }} onClick={handleForceSignIn}>
-                    Continue anyway
-                  </button>
-                  <button type="button" className="btn btn-ghost" style={{ flex: 1, fontSize: 12 }} onClick={() => setError('')}>
-                    Try again
-                  </button>
-                </div>
+          {authError && (
+            <div style={{ marginBottom: 20, padding: '12px 16px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5, margin: 0 }}>{authError}</p>
               </div>
-            )}
+            </div>
+          )}
 
-            {!error && (
-              <button type="submit" className="btn btn-teal" disabled={name.trim().length < 2} style={{ width: '100%' }}>
-                Start Scheduling
-              </button>
-            )}
-          </form>
+          <button
+            onClick={signInWithGoogle}
+            disabled={authLoading}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              width: '100%', padding: '13px 20px',
+              background: 'var(--surface-sm)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', cursor: authLoading ? 'not-allowed' : 'pointer',
+              fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 15, color: 'var(--text-1)',
+              transition: 'background 150ms, border-color 150ms',
+              opacity: authLoading ? 0.6 : 1,
+            }}
+            onMouseEnter={e => { if (!authLoading) { e.currentTarget.style.background = 'var(--teal-dim)'; e.currentTarget.style.borderColor = 'var(--teal-border)' } }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-sm)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+          >
+            <GoogleIcon />
+            Continue with Google
+          </button>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: 'var(--text-4)' }}>
-          Your name will appear on slots you claim.
+        <p style={{ textAlign: 'center', marginTop: 16, fontSize: 12, color: 'var(--text-4)', lineHeight: 1.5 }}>
+          Access is restricted to verified instructors.<br />Contact your administrator if you need access.
         </p>
       </div>
     </div>

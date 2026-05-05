@@ -49,7 +49,8 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
   }
   function handleSave() {
     if (name.trim().length < 2) return
-    onSave({ name: name.trim(), email: email.trim(), eligibleGroups: eligible })
+    if (!email.trim().includes('@')) return
+    onSave({ name: name.trim(), email: email.trim().toLowerCase(), eligibleGroups: eligible })
   }
 
   return (
@@ -59,7 +60,10 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         <input className="input" placeholder="Instructor name" value={name} onChange={e => setName(e.target.value)} autoFocus />
       </div>
       <div>
-        <label style={labelStyle}>Email (optional)</label>
+        <label style={labelStyle}>
+          Email
+          <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Required for sign-in</span>
+        </label>
         <input className="input" type="email" placeholder="instructor@example.com" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
@@ -93,7 +97,7 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2 || !email.trim().includes('@')}>
           {initial ? 'Save Changes' : 'Add Instructor'}
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>

@@ -2,9 +2,9 @@ import { useEffect, useCallback } from 'react'
 import { useApp } from '../context/AppContext'
 
 export function useNotifications() {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useApp()
+  const { notifications, markNotificationRead, markAllNotificationsRead, currentInstructor } = useApp()
 
-  const instructorId = localStorage.getItem('apex_instructor_id')
+  const instructorId = currentInstructor?.id || null
 
   const mine = (notifications || []).filter(n =>
     n.instructorId === null || n.instructorId === instructorId

@@ -1,19 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 
-const DEMO_NAME = 'Demo Instructor'
-
 export default function RoleSwitcher({ role }) {
   const navigate = useNavigate()
 
   if (role === 'admin') {
     return (
       <button
-        onClick={() => {
-          if (!localStorage.getItem('apex_instructor_name')) {
-            localStorage.setItem('apex_instructor_name', DEMO_NAME)
-          }
-          navigate('/schedule/slots')
-        }}
+        onClick={() => navigate('/schedule')}
         title="Switch to instructor view"
         style={{
           background: 'rgba(124,106,247,0.15)',

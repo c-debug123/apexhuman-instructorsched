@@ -8,9 +8,9 @@ import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
 export default function SlotBrowser() {
-  const { claims, addClaim, removeClaim, instructors, courses, modules } = useApp()
-  const name        = localStorage.getItem('apex_instructor_name') || ''
-  const instructorId = localStorage.getItem('apex_instructor_id') || null
+  const { claims, addClaim, removeClaim, instructors, courses, modules, currentInstructor } = useApp()
+  const name         = currentInstructor?.name || ''
+  const instructorId = currentInstructor?.id || null
 
   const [courseFilter, setCourseFilter]       = useState(null)
   const [eligibleOnly, setEligibleOnly]       = useState(false)

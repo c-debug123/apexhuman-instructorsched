@@ -10,8 +10,8 @@ import InstructorNameChip from '../../components/InstructorNameChip'
 
 export default function MySchedule() {
   const navigate = useNavigate()
-  const { removeClaim } = useApp()
-  const name = localStorage.getItem('apex_instructor_name') || ''
+  const { removeClaim, currentInstructor, signOut } = useApp()
+  const name = currentInstructor?.name || ''
   const slots = useSlots()
   const [pendingUnclaim, setPendingUnclaim] = useState(null)
 
@@ -41,8 +41,21 @@ export default function MySchedule() {
               <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>
                 My Schedule
               </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <InstructorNameChip />
+                <button
+                  onClick={signOut}
+                  title="Sign out"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', cursor: 'pointer', color: 'var(--text-3)', transition: 'background 150ms, color 150ms' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = 'var(--red)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface-xs)'; e.currentTarget.style.color = 'var(--text-3)' }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                </button>
               </div>
             </div>
 

@@ -1,32 +1,20 @@
-import { useNavigate } from 'react-router-dom'
+import { useApp } from '../context/AppContext'
 
 export default function InstructorNameChip() {
-  const navigate = useNavigate()
-  const name = localStorage.getItem('apex_instructor_name') || ''
-
-  function changeName() {
-    localStorage.removeItem('apex_instructor_name')
-    navigate('/schedule')
-  }
-
+  const { currentInstructor } = useApp()
+  const name = currentInstructor?.name || ''
   if (!name) return null
-
   return (
-    <button
-      onClick={changeName}
-      title="Change name"
+    <div
       style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
+        display: 'inline-flex', alignItems: 'center',
         background: 'var(--teal-dim)', border: '1px solid var(--teal-border)',
-        borderRadius: 'var(--radius-full)', padding: '3px 8px 3px 10px',
+        borderRadius: 'var(--radius-full)', padding: '3px 10px',
         color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600,
-        fontSize: 11, cursor: 'pointer', maxWidth: 130, overflow: 'hidden',
+        fontSize: 11, maxWidth: 130, overflow: 'hidden',
       }}
     >
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>
-    </button>
+    </div>
   )
 }
