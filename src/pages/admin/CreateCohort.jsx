@@ -86,16 +86,24 @@ function getOverlapIndices(slotDates, courseSlots, modules) {
 // ── Google Maps loader ────────────────────────────────────────────────────────
 
 let mapsPromise = null
+let AutocompleteSuggestion = null
+
 function loadGoogleMaps() {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   if (!key) return Promise.resolve(false)
-  if (window.google?.maps?.places?.AutocompleteSuggestion) return Promise.resolve(true)
+  if (AutocompleteSuggestion) return Promise.resolve(true)
   if (mapsPromise) return mapsPromise
   mapsPromise = new Promise(resolve => {
     const script = document.createElement('script')
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places&loading=async&v=weekly`
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&v=weekly&loading=async`
     script.async = true
-    script.onload = () => resolve(true)
+    script.onload = async () => {
+      try {
+        const lib = await window.google.maps.importLibrary('places')
+        AutocompleteSuggestion = lib.AutocompleteSuggestion
+        resolve(!!AutocompleteSuggestion)
+      } catch { resolve(false) }
+    }
     script.onerror = () => { mapsPromise = null; resolve(false) }
     document.head.appendChild(script)
   })
@@ -116,7 +124,7 @@ function AddressAutocomplete({ value, onChange, placeholder, height }) {
 
   async function fetchSuggestions(input) {
     try {
-      const { suggestions: results } = await window.google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({ input })
+      const { suggestions: results } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({ input })
       setSuggestions((results || []).slice(0, 5))
       setOpen((results || []).length > 0)
     } catch {
