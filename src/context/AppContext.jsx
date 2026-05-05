@@ -82,9 +82,10 @@ export function AppProvider({ children }) {
 
   const signInWithGoogle = useCallback(async () => {
     setAuthError(null)
+    localStorage.setItem('apex_role', 'instructor')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/schedule/slots' },
+      options: { redirectTo: window.location.origin },
     })
     if (error) setAuthError(error.message)
   }, [])
@@ -93,6 +94,7 @@ export function AppProvider({ children }) {
     await supabase.auth.signOut()
     setCurrentInstructor(null)
     setAuthError(null)
+    localStorage.removeItem('apex_role')
   }, [])
 
   // ── Realtime: notifications + cohorts (new slots alert) ──────────────────────
