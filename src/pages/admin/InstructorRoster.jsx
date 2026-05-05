@@ -37,16 +37,26 @@ function SortIcon() {
   )
 }
 
-function InstructorForm({ initial, modules, onSave, onCancel }) {
+function InstructorForm({ initial, instructors, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
   const [email, setEmail]   = useState(initial?.email || '')
   const [phone, setPhone]   = useState(initial?.phone || '')
   const [eligible, setElig] = useState(initial?.eligibleGroups || [])
 
-  const allGroups = [...new Set((modules || []).flatMap(m => m.tags || []))].sort()
+  const allGroups   = [...new Set((modules || []).flatMap(m => m.tags || []))].sort()
   const phoneDigits = phone.replace(/\D/g, '')
-  const groupsValid = allGroups.length === 0 || eligible.length > 0
-  const canSave = name.trim().length >= 2 && email.trim().includes('@') && phoneDigits.length >= 6 && groupsValid
+  const others      = (instructors || []).filter(i => i.id !== initial?.id)
+  const nameTaken   = others.some(i => i.name.trim().toLowerCase() === name.trim().toLowerCase())
+  const emailTaken  = email.trim().includes('@') && others.some(i => i.email?.toLowerCase() === email.trim().toLowerCase())
+
+  const blockReason = name.trim().length < 2       ? 'Enter a full name (at least 2 characters)'
+                    : nameTaken                     ? 'An instructor with this name already exists'
+                    : !email.trim().includes('@')   ? 'Enter a valid Gmail address'
+                    : emailTaken                    ? 'This email is already registered to another instructor'
+                    : phoneDigits.length < 6        ? 'Enter a valid mobile number'
+                    : (allGroups.length > 0 && eligible.length === 0) ? 'Select at least one module group'
+                    : null
+  const canSave = !blockReason
 
   function toggleGroup(g) {
     setElig(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
@@ -116,6 +126,12 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
       </div>
+      {blockReason && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style={{ fontSize: 12, color: 'var(--text-4)' }}>{blockReason}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -338,11 +354,11 @@ export default function InstructorRoster() {
       </BottomSheet>
 
       <BottomSheet isOpen={showCreate} onClose={() => setShowCreate(false)} title="Add Instructor">
-        <InstructorForm modules={moduleList} onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+        <InstructorForm instructors={instructorList} modules={moduleList} onSave={handleCreate} onCancel={() => setShowCreate(false)} />
       </BottomSheet>
 
       <BottomSheet isOpen={!!editing} onClose={() => setEditing(null)} title="Edit Instructor">
-        {editing && <InstructorForm initial={editing} modules={moduleList} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
+        {editing && <InstructorForm initial={editing} instructors={instructorList} modules={moduleList} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
       </BottomSheet>
 
       <BottomSheet isOpen={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Remove instructor?">
