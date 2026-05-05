@@ -18,7 +18,7 @@ const AppContext = createContext(null)
 function toModule(r)  { return { id: r.id, name: r.name, description: r.description, tags: r.tags || [], durationHours: r.duration_hours ?? 2, createdAt: r.created_at } }
 function toCourse(r)  { return { id: r.id, code: r.code, name: r.name, fullTitle: r.full_title, shortName: r.short_name, color: r.color, num: r.num, track: r.track, days: r.days || [], groups: r.groups || [], createdAt: r.created_at } }
 function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, slotDates: r.slot_dates || [], createdAt: r.created_at } }
-function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, eligibleGroups: r.eligible_groups || [], createdAt: r.created_at } }
+function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, phone: r.phone || '', eligibleGroups: r.eligible_groups || [], createdAt: r.created_at } }
 function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
 
@@ -232,7 +232,7 @@ export function AppProvider({ children }) {
   // ── Instructors ───────────────────────────────────────────────────────────────
   const addInstructor = useCallback(async (inst) => {
     const { data, error } = await supabase.from('instructors')
-      .insert({ id: inst.id, name: inst.name, email: inst.email || null, eligible_groups: inst.eligibleGroups || [] })
+      .insert({ id: inst.id, name: inst.name, email: inst.email || null, phone: inst.phone || null, eligible_groups: inst.eligibleGroups || [] })
       .select().single()
     if (error || !data) return
     setInstructors(prev => [...prev, toInstructor(data)])
@@ -240,7 +240,7 @@ export function AppProvider({ children }) {
 
   const updateInstructor = useCallback(async (inst) => {
     const { data, error } = await supabase.from('instructors')
-      .update({ name: inst.name, email: inst.email || null, eligible_groups: inst.eligibleGroups || [] })
+      .update({ name: inst.name, email: inst.email || null, phone: inst.phone || null, eligible_groups: inst.eligibleGroups || [] })
       .eq('id', inst.id).select().single()
     if (error || !data) return
     setInstructors(prev => prev.map(x => x.id === inst.id ? toInstructor(data) : x))

@@ -40,17 +40,20 @@ function SortIcon() {
 function InstructorForm({ initial, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
   const [email, setEmail]   = useState(initial?.email || '')
+  const [phone, setPhone]   = useState(initial?.phone || '')
   const [eligible, setElig] = useState(initial?.eligibleGroups || [])
 
   const allGroups = [...new Set((modules || []).flatMap(m => m.tags || []))].sort()
+  const phoneDigits = phone.replace(/\D/g, '')
+  const groupsValid = allGroups.length === 0 || eligible.length > 0
+  const canSave = name.trim().length >= 2 && email.trim().includes('@') && phoneDigits.length >= 6 && groupsValid
 
   function toggleGroup(g) {
     setElig(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
   }
   function handleSave() {
-    if (name.trim().length < 2) return
-    if (!email.trim().includes('@')) return
-    onSave({ name: name.trim(), email: email.trim().toLowerCase(), eligibleGroups: eligible })
+    if (!canSave) return
+    onSave({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), eligibleGroups: eligible })
   }
 
   return (
@@ -61,13 +64,24 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
       </div>
       <div>
         <label style={labelStyle}>
-          Email
+          Gmail
           <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Required for sign-in</span>
         </label>
-        <input className="input" type="email" placeholder="instructor@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+        <input className="input" type="email" placeholder="instructor@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
-        <label style={labelStyle}>Module groups</label>
+        <label style={labelStyle}>Mobile number</label>
+        <input className="input" type="tel" placeholder="+65 9123 4567" value={phone} onChange={e => setPhone(e.target.value)} />
+      </div>
+      <div>
+        <label style={labelStyle}>
+          Module groups
+          {allGroups.length > 0 && (
+            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: eligible.length > 0 ? 'var(--teal)' : 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {eligible.length > 0 ? `${eligible.length} selected` : 'Select at least one'}
+            </span>
+          )}
+        </label>
         <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 10, lineHeight: 1.5 }}>
           This instructor can teach any module belonging to the selected groups.
         </p>
@@ -85,7 +99,7 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
                   background: on ? 'var(--accent-dim)' : 'var(--surface-xs)',
                   cursor: 'pointer', transition: 'all 150ms',
                 }}>
-                  {on && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke={on ? 'var(--accent)' : 'var(--text-4)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                  {on && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: on ? 'var(--accent)' : 'var(--text-2)' }}>{g}</span>
                   <span style={{ fontSize: 11, color: on ? 'var(--accent)' : 'var(--text-4)' }}>
                     {(modules || []).filter(m => (m.tags || []).includes(g)).length}
@@ -97,7 +111,7 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2 || !email.trim().includes('@')}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={!canSave}>
           {initial ? 'Save Changes' : 'Add Instructor'}
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>

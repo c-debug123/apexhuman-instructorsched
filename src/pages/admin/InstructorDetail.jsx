@@ -9,19 +9,22 @@ const labelStyle = {
 }
 
 function InstructorForm({ initial, modules, onSave, onCancel }) {
-  const [name, setName]   = useState(initial?.name || '')
-  const [email, setEmail] = useState(initial?.email || '')
+  const [name, setName]     = useState(initial?.name || '')
+  const [email, setEmail]   = useState(initial?.email || '')
+  const [phone, setPhone]   = useState(initial?.phone || '')
   const [eligible, setElig] = useState(initial?.eligibleGroups || [])
 
   const allGroups = [...new Set((modules || []).flatMap(m => m.tags || []))].sort()
+  const phoneDigits = phone.replace(/\D/g, '')
+  const groupsValid = allGroups.length === 0 || eligible.length > 0
+  const canSave = name.trim().length >= 2 && email.trim().includes('@') && phoneDigits.length >= 6 && groupsValid
 
   function toggleGroup(g) {
     setElig(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
   }
-
   function handleSave() {
-    if (name.trim().length < 2) return
-    onSave({ name: name.trim(), email: email.trim(), eligibleGroups: eligible })
+    if (!canSave) return
+    onSave({ name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), eligibleGroups: eligible })
   }
 
   return (
@@ -31,11 +34,25 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         <input className="input" placeholder="Instructor name" value={name} onChange={e => setName(e.target.value)} autoFocus />
       </div>
       <div>
-        <label style={labelStyle}>Email (optional)</label>
-        <input className="input" type="email" placeholder="instructor@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+        <label style={labelStyle}>
+          Gmail
+          <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: 'var(--teal)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Required for sign-in</span>
+        </label>
+        <input className="input" type="email" placeholder="instructor@gmail.com" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
-        <label style={labelStyle}>Module groups</label>
+        <label style={labelStyle}>Mobile number</label>
+        <input className="input" type="tel" placeholder="+65 9123 4567" value={phone} onChange={e => setPhone(e.target.value)} />
+      </div>
+      <div>
+        <label style={labelStyle}>
+          Module groups
+          {allGroups.length > 0 && (
+            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, color: eligible.length > 0 ? 'var(--teal)' : 'var(--red)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {eligible.length > 0 ? `${eligible.length} selected` : 'Select at least one'}
+            </span>
+          )}
+        </label>
         <p style={{ fontSize: 12, color: 'var(--text-4)', marginBottom: 10, lineHeight: 1.5 }}>
           This instructor can teach any module belonging to the selected groups.
         </p>
@@ -64,7 +81,7 @@ function InstructorForm({ initial, modules, onSave, onCancel }) {
         )}
       </div>
       <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
-        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={name.trim().length < 2}>
+        <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave} disabled={!canSave}>
           Save Changes
         </button>
         <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
@@ -155,10 +172,14 @@ export default function InstructorDetail() {
               <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 18, color: 'var(--text-1)', marginBottom: 4 }}>
                 {inst.name}
               </div>
-              {inst.email ? (
-                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{inst.email}</div>
-              ) : (
-                <div style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>No email on file</div>
+              {inst.email && (
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 2 }}>{inst.email}</div>
+              )}
+              {inst.phone && (
+                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{inst.phone}</div>
+              )}
+              {!inst.email && !inst.phone && (
+                <div style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>No contact info on file</div>
               )}
             </div>
           </div>
