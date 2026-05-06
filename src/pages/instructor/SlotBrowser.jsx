@@ -39,38 +39,60 @@ export default function SlotBrowser() {
     return (mod.tags || []).some(tag => eligibleGroups.has(tag))
   }
 
-  function handleClaim(slot) {
-    const conflict = claims.find(cl =>
-      cl.instructorName === name && cl.date === slot.date && cl.id !== slot.claim?.id
+  // Return all bundle-companion slots for a given slot (including itself), for the same section
+  function getBundleSlots(slot) {
+    if (!slot.bundleGroup) return [slot]
+    return slots.filter(s =>
+      s.cohortId === slot.cohortId &&
+      s.section === slot.section &&
+      slot.bundleGroup.dayIndexes.includes(s.day - 1)
     )
-    if (conflict) {
-      const conflictingSlot = slots.find(s => s.cohortId === conflict.cohortId && s.day === conflict.day && s.section === conflict.section)
-      setConflictSlot({ incoming: slot, existing: conflictingSlot || conflict })
-    } else {
-      setPendingClaim(slot)
+  }
+
+  function handleClaim(slot) {
+    const bundleSlots = getBundleSlots(slot)
+    // Check for date conflicts across all slots in the bundle
+    for (const bs of bundleSlots) {
+      const conflict = claims.find(cl =>
+        cl.instructorName === name && cl.date === bs.date && cl.id !== bs.claim?.id
+      )
+      if (conflict) {
+        const conflictingSlot = slots.find(s => s.cohortId === conflict.cohortId && s.day === conflict.day && s.section === conflict.section)
+        setConflictSlot({ incoming: slot, existing: conflictingSlot || conflict })
+        return
+      }
     }
+    setPendingClaim(slot)
   }
 
   function confirmClaim() {
     if (!pendingClaim) return
-    const claim = {
-      id: crypto.randomUUID(),
-      cohortId: pendingClaim.cohortId,
-      courseId: pendingClaim.courseId,
-      day: pendingClaim.day,
-      section: pendingClaim.section,
-      date: pendingClaim.date,
-      instructorType: pendingClaim.instructorType,
-      instructorName: name,
-      instructorId: instructorId || null,
-      claimedAt: new Date().toISOString(),
-    }
-    addClaim(claim)
+    const bundleSlots = getBundleSlots(pendingClaim)
+    bundleSlots.forEach(bs => {
+      if (!bs.claim) {
+        addClaim({
+          id: crypto.randomUUID(),
+          cohortId: bs.cohortId,
+          courseId: bs.courseId,
+          day: bs.day,
+          section: bs.section,
+          date: bs.date,
+          instructorType: bs.instructorType,
+          instructorName: name,
+          instructorId: instructorId || null,
+          claimedAt: new Date().toISOString(),
+        })
+      }
+    })
     setPendingClaim(null)
   }
 
   function confirmUnclaim() {
-    if (pendingUnclaim?.claim) removeClaim(pendingUnclaim.claim.id)
+    if (!pendingUnclaim) return
+    const bundleSlots = getBundleSlots(pendingUnclaim)
+    bundleSlots.forEach(bs => {
+      if (bs.claim?.instructorName === name) removeClaim(bs.claim.id)
+    })
     setPendingUnclaim(null)
   }
 
@@ -179,23 +201,67 @@ export default function SlotBrowser() {
       </div>
 
       {/* Claim confirmation */}
-      <BottomSheet isOpen={!!pendingClaim} onClose={() => setPendingClaim(null)} title="Claim this slot?">
-        {pendingClaim && (
-          <div>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '10px 0', marginBottom: 16, borderBottom: '1px solid var(--border-dim)' }}>
-              <div style={{ width: 4, height: 40, borderRadius: 2, background: pendingClaim.course?.color, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>{pendingClaim.course?.name}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Module {pendingClaim.day} · Section {pendingClaim.section} · {formatDate(pendingClaim.date)}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingClaim.instructorType}</div>
+      <BottomSheet
+        isOpen={!!pendingClaim}
+        onClose={() => setPendingClaim(null)}
+        title={pendingClaim?.bundleGroup ? 'Claim this bundle?' : 'Claim this slot?'}
+      >
+        {pendingClaim && (() => {
+          const bundleSlots = getBundleSlots(pendingClaim)
+          const isBundle    = !!pendingClaim.bundleGroup
+          const bundleColor = pendingClaim.bundleGroup?.color || pendingClaim.course?.color
+          return (
+            <div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', marginBottom: 16, borderBottom: '1px solid var(--border-dim)' }}>
+                <div style={{ width: 4, borderRadius: 2, background: bundleColor, flexShrink: 0, alignSelf: 'stretch', minHeight: 40 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 4 }}>
+                    {pendingClaim.course?.name}
+                  </div>
+                  {isBundle ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {bundleSlots.map(bs => (
+                        <div key={bs.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 700,
+                            padding: '2px 7px', borderRadius: 'var(--radius-sm)',
+                            background: bundleColor ? `${bundleColor}20` : 'var(--surface-xs)',
+                            color: bundleColor || 'var(--text-3)',
+                            border: `1px solid ${bundleColor ? `${bundleColor}55` : 'var(--border-dim)'}`,
+                          }}>
+                            M{bs.day}
+                          </span>
+                          <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                            {bs.moduleName} · {formatDate(bs.date)}
+                          </span>
+                        </div>
+                      ))}
+                      <div style={{ marginTop: 4, fontSize: 12, color: 'var(--text-3)' }}>
+                        Section {pendingClaim.section}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 13, color: 'var(--text-3)' }}>Module {pendingClaim.day} · Section {pendingClaim.section} · {formatDate(pendingClaim.date)}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{pendingClaim.instructorType}</div>
+                    </>
+                  )}
+                </div>
+              </div>
+              {isBundle && (
+                <div style={{ marginBottom: 14, padding: '8px 12px', background: bundleColor ? `${bundleColor}10` : 'var(--surface-xs)', border: `1px solid ${bundleColor ? `${bundleColor}30` : 'var(--border-dim)'}`, borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                  All {bundleSlots.length} modules in this bundle will be claimed together.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-teal" style={{ flex: 1 }} onClick={confirmClaim}>
+                  {isBundle ? `Claim Bundle (${bundleSlots.length})` : 'Claim'}
+                </button>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingClaim(null)}>Cancel</button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-teal" style={{ flex: 1 }} onClick={confirmClaim}>Claim</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingClaim(null)}>Cancel</button>
-            </div>
-          </div>
-        )}
+          )
+        })()}
       </BottomSheet>
 
       {/* Conflict modal */}
@@ -215,20 +281,42 @@ export default function SlotBrowser() {
       </BottomSheet>
 
       {/* Unclaim confirmation */}
-      <BottomSheet isOpen={!!pendingUnclaim} onClose={() => setPendingUnclaim(null)} title="Remove this slot?">
-        {pendingUnclaim && (
-          <div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16 }}>
-              {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
-              {formatDate(pendingUnclaim.date)}<br /><br />
-              This slot will become available for other instructors.
+      <BottomSheet
+        isOpen={!!pendingUnclaim}
+        onClose={() => setPendingUnclaim(null)}
+        title={pendingUnclaim?.bundleGroup ? 'Remove this bundle?' : 'Remove this slot?'}
+      >
+        {pendingUnclaim && (() => {
+          const bundleSlots = getBundleSlots(pendingUnclaim)
+          const isBundle    = !!pendingUnclaim.bundleGroup
+          const bundleLabel = isBundle ? bundleSlots.map(bs => `M${bs.day}`).join(' + ') : null
+          return (
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.6 }}>
+                {isBundle ? (
+                  <>
+                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 6 }}>
+                      {pendingUnclaim.course?.name} — Bundle {bundleLabel}
+                    </div>
+                    <div>Section {pendingUnclaim.section} · All {bundleSlots.length} modules will be released.</div>
+                  </>
+                ) : (
+                  <>
+                    {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
+                    {formatDate(pendingUnclaim.date)}
+                  </>
+                )}
+                <div style={{ marginTop: 8 }}>This slot{isBundle ? 's' : ''} will become available for other instructors.</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>
+                  {isBundle ? `Remove Bundle (${bundleSlots.length})` : 'Remove'}
+                </button>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>Remove</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
-            </div>
-          </div>
-        )}
+          )
+        })()}
       </BottomSheet>
 
       {/* Course picker */}

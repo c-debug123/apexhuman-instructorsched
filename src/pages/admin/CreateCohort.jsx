@@ -392,17 +392,31 @@ export default function CreateCohort() {
                       : `Must be on ${formatDateShort(prev.date)} at ${prevEndTime} or later`
                   }
 
+                  const grp      = (selectedCourse?.groups || []).find(g => (g.dayIndexes || []).includes(i))
+                  const grpColor = grp?.color || null
+
                   return (
-                    <div key={slot.id || i} style={{ background: 'var(--surface-sm)', border: `1px solid ${hasError ? 'var(--red)' : 'var(--border-dim)'}`, borderRadius: 'var(--radius-sm)', padding: '12px 14px', transition: 'border-color 150ms' }}>
+                    <div key={slot.id || i} style={{ background: 'var(--surface-sm)', border: `1px solid ${hasError ? 'var(--red)' : 'var(--border-dim)'}`, borderLeft: grpColor ? `3px solid ${grpColor}` : undefined, borderRadius: 'var(--radius-sm)', padding: '12px 14px', transition: 'border-color 150ms' }}>
 
                       {/* Module label */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                        <div style={{ width: 20, height: 20, borderRadius: '50%', flexShrink: 0, background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10, color: 'var(--accent)' }}>
-                          {i + 1}
+                        <div style={{
+                          padding: '2px 8px', borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                          background: grpColor ? `${grpColor}20` : 'var(--accent-dim)',
+                          border: `1px solid ${grpColor || 'var(--accent-border)'}`,
+                          fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10,
+                          color: grpColor || 'var(--accent)',
+                        }}>
+                          M{i + 1}
                         </div>
                         <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', flex: 1 }}>
                           {slot.label || mod?.name || `Module ${i + 1}`}
                         </span>
+                        {grp && (
+                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)', background: `${grpColor}20`, color: grpColor, border: `1px solid ${grpColor}` }}>
+                            Bundle
+                          </span>
+                        )}
                         {mod && <span style={{ fontSize: 11, color: 'var(--text-4)', fontFamily: 'Space Grotesk' }}>{mod.durationHours}h</span>}
                       </div>
 

@@ -91,25 +91,29 @@ export default function CohortDetail() {
             <div className="section-label" style={{ marginBottom: 10 }}>Module Schedule</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {(course?.days || []).map((courseSlot, i) => {
-                const mod     = modules.find(m => m.id === courseSlot?.moduleId)
-                const sd      = slotDates[i]
-                const endTime = sd ? calcEndTime(sd.startTime, mod?.durationHours) : ''
-                const label   = courseSlot?.label || mod?.name || `Module ${i + 1}`
+                const mod      = modules.find(m => m.id === courseSlot?.moduleId)
+                const sd       = slotDates[i]
+                const endTime  = sd ? calcEndTime(sd.startTime, mod?.durationHours) : ''
+                const label    = courseSlot?.label || mod?.name || `Module ${i + 1}`
+                const grp      = (course?.groups || []).find(g => (g.dayIndexes || []).includes(i))
+                const grpColor = grp?.color || null
                 return (
                   <div
                     key={courseSlot?.id || i}
                     className="card"
-                    style={{ padding: '12px 14px', display: 'flex', gap: 14, alignItems: 'flex-start' }}
+                    style={{ padding: '12px 14px', display: 'flex', gap: 14, alignItems: 'flex-start', borderLeft: grpColor ? `3px solid ${grpColor}` : undefined }}
                   >
-                    {/* Index badge */}
+                    {/* M-badge */}
                     <div style={{
-                      width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                      background: 'var(--accent-dim)', border: '1px solid var(--accent-border)',
+                      width: 28, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                      background: grpColor ? `${grpColor}20` : 'var(--accent-dim)',
+                      border: `1px solid ${grpColor || 'var(--accent-border)'}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10, color: 'var(--accent)',
+                      fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10,
+                      color: grpColor || 'var(--accent)',
                       marginTop: 1,
                     }}>
-                      {i + 1}
+                      M{i + 1}
                     </div>
 
                     {/* Content */}
@@ -147,6 +151,13 @@ export default function CohortDetail() {
                           </span>
                         </div>
                       )}
+                      {grp && (
+                        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `${grpColor}20`, color: grpColor, border: `1px solid ${grpColor}` }}>
+                            Bundle: {grp.dayIndexes.map(idx => `M${idx + 1}`).join(' + ')}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -164,13 +175,22 @@ export default function CohortDetail() {
                 <tr style={{ background: 'var(--surface-xs)' }}>
                   <th style={thStyle('left')}>Sec</th>
                   {Array.from({ length: dayCount }, (_, i) => {
-                    const dayDef = course?.days?.[i]
-                    const mod    = modules.find(m => m.id === dayDef?.moduleId)
-                    const name   = mod?.name || dayDef?.label || `D${i + 1}`
-                    const abbr   = name.length > 8 ? name.slice(0, 7) + '…' : name
+                    const dayDef   = course?.days?.[i]
+                    const mod      = modules.find(m => m.id === dayDef?.moduleId)
+                    const grp      = (course?.groups || []).find(g => (g.dayIndexes || []).includes(i))
+                    const grpColor = grp?.color || null
+                    const title    = mod?.name || dayDef?.label || `Module ${i + 1}`
                     return (
-                      <th key={i} style={thStyle('center')} title={name}>
-                        {abbr}
+                      <th key={i} style={{ ...thStyle('center'), color: grpColor || undefined }} title={title}>
+                        <span style={{
+                          display: 'inline-block', padding: '2px 6px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: grpColor ? `${grpColor}20` : 'transparent',
+                          color: grpColor || 'var(--text-3)',
+                          border: grpColor ? `1px solid ${grpColor}55` : 'none',
+                        }}>
+                          M{i + 1}
+                        </span>
                       </th>
                     )
                   })}

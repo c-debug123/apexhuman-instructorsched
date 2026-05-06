@@ -27,6 +27,15 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
             cl => cl.cohortId === cohort.id && cl.day === day && cl.section === section
           )
 
+          const courseGroups = course.groups || []
+          const rawGroup = courseGroups.find(g => (g.dayIndexes || []).includes(dayIdx)) || null
+          const bundleGroup = rawGroup ? {
+            id: rawGroup.id,
+            name: rawGroup.name,
+            color: rawGroup.color || null,
+            dayIndexes: rawGroup.dayIndexes,
+          } : null
+
           slots.push({
             id: `${cohort.id}-d${day}-s${section}`,
             cohortId: cohort.id,
@@ -42,6 +51,7 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
             moduleTags: module?.tags || [],
             startTime: sd?.startTime || null,
             durationHours: module?.durationHours || null,
+            bundleGroup,
             claim: claim || null,
           })
         }
@@ -77,6 +87,15 @@ export function useSlotsForCohort(cohortId) {
         const instructorType = dayDef?.label || module?.name || `Day ${day}`
         const claim  = claims.find(cl => cl.cohortId === cohortId && cl.day === day && cl.section === section)
 
+        const courseGroups = course?.groups || []
+        const rawGroup = courseGroups.find(g => (g.dayIndexes || []).includes(dayIdx)) || null
+        const bundleGroup = rawGroup ? {
+          id: rawGroup.id,
+          name: rawGroup.name,
+          color: rawGroup.color || null,
+          dayIndexes: rawGroup.dayIndexes,
+        } : null
+
         slots.push({
           id: `${cohortId}-d${day}-s${section}`,
           cohortId,
@@ -91,6 +110,7 @@ export function useSlotsForCohort(cohortId) {
           moduleTags: module?.tags || [],
           startTime: sd?.startTime || null,
           durationHours: module?.durationHours || null,
+          bundleGroup,
           claim: claim || null,
         })
       }

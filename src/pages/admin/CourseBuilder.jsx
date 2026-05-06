@@ -272,64 +272,175 @@ function LabelForm({ slot, modules, onSave, onCancel }) {
 }
 
 // ── Instructor group rules ────────────────────────────────────────────────────
+const BUNDLE_COLORS = ['#2dd4bf', '#f59e0b', '#ec4899', '#22c55e', '#3b82f6', '#f97316']
+
 function GroupRules({ slots, groups, onChange }) {
   const [editGroup, setEditGroup]     = useState(null)
+  const [activeGroupId, setActiveGroupId] = useState(null)
   const [newGroupName, setNewGroupName] = useState('')
 
-  function addGroup() {
-    const name = newGroupName.trim() || `Group ${groups.length + 1}`
-    onChange([...groups, { id: crypto.randomUUID(), name, dayIndexes: [] }])
-    setNewGroupName('')
+  function nextColor() {
+    const used = new Set(groups.map(g => g.color).filter(Boolean))
+    return BUNDLE_COLORS.find(c => !used.has(c)) ?? BUNDLE_COLORS[groups.length % BUNDLE_COLORS.length]
   }
-  function removeGroup(id) { onChange(groups.filter(g => g.id !== id)) }
-  function toggleSlot(groupId, idx) {
+
+  function addGroup() {
+    const name  = newGroupName.trim() || `Group ${groups.length + 1}`
+    const color = nextColor()
+    const id    = crypto.randomUUID()
+    onChange([...groups, { id, name, color, dayIndexes: [] }])
+    setNewGroupName('')
+    setActiveGroupId(id)
+  }
+
+  function removeGroup(id) {
+    onChange(groups.filter(g => g.id !== id))
+    if (activeGroupId === id) setActiveGroupId(null)
+  }
+
+  function toggleModuleInGroup(groupId, idx) {
     onChange(groups.map(g => {
-      if (g.id !== groupId) return g
+      if (g.id !== groupId) {
+        // Remove from other groups — one module can only be in one group
+        return { ...g, dayIndexes: g.dayIndexes.filter(i => i !== idx) }
+      }
       const has = g.dayIndexes.includes(idx)
-      return { ...g, dayIndexes: has ? g.dayIndexes.filter(i => i !== idx) : [...g.dayIndexes, idx].sort((a,b)=>a-b) }
+      return { ...g, dayIndexes: has ? g.dayIndexes.filter(i => i !== idx) : [...g.dayIndexes, idx].sort((a, b) => a - b) }
     }))
   }
-  function renameGroup(id, name) { onChange(groups.map(g => g.id === id ? { ...g, name } : g)); setEditGroup(null) }
+
+  function renameGroup(id, name) {
+    onChange(groups.map(g => g.id === id ? { ...g, name } : g))
+    setEditGroup(null)
+  }
+
+  function moduleGroupColor(idx) {
+    const g = groups.find(g => (g.dayIndexes || []).includes(idx))
+    return g?.color || null
+  }
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.5 }}>
-        Group modules that must be taught by the same instructor.
+      <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 4, lineHeight: 1.5 }}>
+        Group modules that must be claimed together. When an instructor claims any module in a group, all others in that group are automatically claimed too.
       </p>
-      {groups.map(group => (
-        <div key={group.id} style={{ marginBottom: 10, padding: '12px 14px', background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-sm)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            {editGroup === group.id ? (
-              <input className="input" defaultValue={group.name} autoFocus style={{ flex: 1, marginRight: 8, fontSize: 13 }}
-                onBlur={e => renameGroup(group.id, e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && renameGroup(group.id, e.target.value)} />
-            ) : (
-              <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', cursor: 'pointer' }} onClick={() => setEditGroup(group.id)}>
-                {group.name}
-              </span>
-            )}
-            <button className="btn btn-ghost" onClick={() => removeGroup(group.id)} style={{ fontSize: 11, padding: '2px 8px', minHeight: 24, color: 'var(--red)' }}>Remove</button>
+
+      {/* Module map — visual overview of group assignments */}
+      {slots.length > 0 && (
+        <div style={{ marginBottom: 16, marginTop: 14 }}>
+          <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-4)', marginBottom: 8 }}>
+            Module Map — click a group below, then tap modules to assign
           </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
             {slots.map((slot, idx) => {
-              const selected = group.dayIndexes.includes(idx)
+              const color = moduleGroupColor(idx)
+              const canAssign = !!activeGroupId
               return (
-                <button key={slot.id} onClick={() => toggleSlot(group.id, idx)} style={{
-                  fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600,
-                  padding: '4px 10px', borderRadius: 'var(--radius-full)',
-                  border: `1px solid ${selected ? 'var(--accent)' : 'var(--border)'}`,
-                  background: selected ? 'var(--accent-dim)' : 'transparent',
-                  color: selected ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer',
-                }}>
-                  Slot {idx + 1}
+                <button
+                  key={slot.id}
+                  onClick={() => activeGroupId && toggleModuleInGroup(activeGroupId, idx)}
+                  title={slot.label || `Module ${idx + 1}`}
+                  style={{
+                    fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 700,
+                    padding: '5px 12px', borderRadius: 'var(--radius-full)',
+                    border: `1.5px solid ${color || 'var(--border-dim)'}`,
+                    background: color ? `${color}20` : 'transparent',
+                    color: color || 'var(--text-4)',
+                    cursor: canAssign ? 'pointer' : 'default',
+                    transition: 'all 120ms',
+                  }}
+                >
+                  M{idx + 1}
                 </button>
               )
             })}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Group rows */}
+      {groups.map(group => {
+        const isActive = group.id === activeGroupId
+        const color    = group.color || 'var(--accent)'
+        return (
+          <div
+            key={group.id}
+            onClick={() => setActiveGroupId(isActive ? null : group.id)}
+            style={{
+              marginBottom: 8, padding: '12px 14px',
+              background: isActive ? `${color}12` : 'var(--surface-xs)',
+              border: `1.5px solid ${isActive ? color : 'var(--border-dim)'}`,
+              borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+              transition: 'all 150ms',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: group.dayIndexes.length > 0 ? 10 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                {editGroup === group.id ? (
+                  <input
+                    className="input"
+                    defaultValue={group.name}
+                    autoFocus
+                    style={{ flex: 1, fontSize: 13 }}
+                    onClick={e => e.stopPropagation()}
+                    onBlur={e => renameGroup(group.id, e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && renameGroup(group.id, e.target.value)}
+                  />
+                ) : (
+                  <span
+                    style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}
+                    onClick={e => { e.stopPropagation(); setEditGroup(group.id) }}
+                  >
+                    {group.name}
+                  </span>
+                )}
+                {isActive && (
+                  <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, color, background: `${color}20`, padding: '2px 8px', borderRadius: 'var(--radius-full)', border: `1px solid ${color}` }}>
+                    Active — tap modules above
+                  </span>
+                )}
+              </div>
+              <button
+                className="btn btn-ghost"
+                onClick={e => { e.stopPropagation(); removeGroup(group.id) }}
+                style={{ fontSize: 11, padding: '2px 8px', minHeight: 24, color: 'var(--red)' }}
+              >
+                Remove
+              </button>
+            </div>
+            {group.dayIndexes.length > 0 ? (
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {group.dayIndexes.map(idx => (
+                  <span
+                    key={idx}
+                    style={{
+                      fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 700,
+                      padding: '3px 10px', borderRadius: 'var(--radius-full)',
+                      background: `${color}20`, color, border: `1px solid ${color}`,
+                    }}
+                  >
+                    M{idx + 1}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--text-4)', marginTop: 4 }}>
+                {isActive ? 'Tap modules in the map above to assign them.' : 'No modules assigned — select this group to start.'}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
       <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <input className="input" placeholder="Group name (optional)" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} style={{ flex: 1, fontSize: 13 }} />
+        <input
+          className="input"
+          placeholder="Group name (optional)"
+          value={newGroupName}
+          onChange={e => setNewGroupName(e.target.value)}
+          style={{ flex: 1, fontSize: 13 }}
+        />
         <button className="btn btn-ghost" onClick={addGroup} style={{ whiteSpace: 'nowrap' }}>+ Add Group</button>
       </div>
     </div>
@@ -709,11 +820,20 @@ export default function CourseBuilder() {
                 <div style={sectionHeader}>Module Sequence</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {(dc.days || []).map((slot, i) => {
-                    const mod = mods.find(m => m.id === slot.moduleId)
+                    const mod      = mods.find(m => m.id === slot.moduleId)
+                    const grp      = (dc.groups || []).find(g => (g.dayIndexes || []).includes(i))
+                    const grpColor = grp?.color || null
                     return (
-                      <div key={slot.id || i} className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, background: 'var(--accent-dim)', border: '1px solid var(--accent-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 11, color: 'var(--accent)' }}>
-                          {i + 1}
+                      <div key={slot.id || i} className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: grpColor ? `3px solid ${grpColor}` : undefined }}>
+                        <div style={{
+                          width: 28, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                          background: grpColor ? `${grpColor}20` : 'var(--accent-dim)',
+                          border: `1px solid ${grpColor || 'var(--accent-border)'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 10,
+                          color: grpColor || 'var(--accent)',
+                        }}>
+                          M{i + 1}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>
@@ -725,9 +845,9 @@ export default function CourseBuilder() {
                             </div>
                           )}
                         </div>
-                        {(mod?.tags || []).length > 0 && (
-                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 7px', borderRadius: 'var(--radius-full)', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)', flexShrink: 0 }}>
-                            {mod.tags[0]}
+                        {grp && (
+                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `${grpColor}20`, color: grpColor, border: `1px solid ${grpColor}`, flexShrink: 0 }}>
+                            {grp.name}
                           </span>
                         )}
                       </div>
@@ -737,28 +857,35 @@ export default function CourseBuilder() {
               </section>
             )}
 
-            {/* Instructor groups */}
+            {/* Claim bundles */}
             {(dc.groups || []).length > 0 && (
               <section>
-                <div style={sectionHeader}>Instructor Groups</div>
+                <div style={sectionHeader}>Claim Bundles</div>
+                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 10, lineHeight: 1.5 }}>
+                  Instructors who claim any module in a bundle automatically claim all modules in that bundle.
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {dc.groups.map(group => {
-                    const groupSlots = (group.dayIndexes || []).map(idx => dc.days?.[idx]).filter(Boolean)
+                    const color = group.color || 'var(--accent)'
                     return (
-                      <div key={group.id} className="card" style={{ padding: '12px 14px' }}>
-                        <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)', marginBottom: 8 }}>
-                          {group.name}
+                      <div key={group.id} className="card" style={{ padding: '12px 14px', borderLeft: `3px solid ${color}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: group.dayIndexes?.length > 0 ? 8 : 0 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
+                          <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-1)' }}>
+                            {group.name}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {groupSlots.map((slot, i) => {
-                            const mod = mods.find(m => m.id === slot.moduleId)
-                            return (
-                              <span key={slot.id || i} style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'var(--surface-xs)', color: 'var(--text-2)', border: '1px solid var(--border-dim)' }}>
-                                {slot.label || mod?.name || `Slot ${group.dayIndexes[i] + 1}`}
+                        {(group.dayIndexes || []).length > 0 ? (
+                          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                            {group.dayIndexes.map(idx => (
+                              <span key={idx} style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 700, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: `${color}20`, color, border: `1px solid ${color}` }}>
+                                M{idx + 1}
                               </span>
-                            )
-                          })}
-                        </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: 'var(--text-4)' }}>No modules assigned</div>
+                        )}
                       </div>
                     )
                   })}
