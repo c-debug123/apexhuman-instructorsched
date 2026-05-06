@@ -107,6 +107,17 @@ export default function SlotCard({ slot, currentName, onClaim, onUnclaim, compac
             </span>
           ))}
         </div>
+        {/* Row 5: location */}
+        {(slot.room || slot.address) && (
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginTop: 5 }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+            <span style={{ fontSize: 11, color: 'var(--text-3)', lineHeight: 1.4 }}>
+              {[slot.room, slot.address].filter(Boolean).join(' · ')}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Action */}

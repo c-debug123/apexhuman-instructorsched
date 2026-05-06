@@ -51,6 +51,8 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
             moduleTags: module?.tags || [],
             startTime: sd?.startTime || null,
             durationHours: module?.durationHours || null,
+            room: sd?.room || null,
+            address: sd?.address || null,
             bundleGroup,
             claim: claim || null,
           })
@@ -110,6 +112,8 @@ export function useSlotsForCohort(cohortId) {
           moduleTags: module?.tags || [],
           startTime: sd?.startTime || null,
           durationHours: module?.durationHours || null,
+          room: sd?.room || null,
+          address: sd?.address || null,
           bundleGroup,
           claim: claim || null,
         })

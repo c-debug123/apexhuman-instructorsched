@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminAnalytics from './pages/admin/AdminAnalytics'
 import CreateCohort from './pages/admin/CreateCohort'
 import CohortDetail from './pages/admin/CohortDetail'
 import InstructorRoster from './pages/admin/InstructorRoster'
@@ -22,6 +23,7 @@ function AdminRoutes() {
       <Route path="/admin/calendar" element={<CalendarView />} />
       <Route path="/admin/roster" element={<InstructorRoster />} />
       <Route path="/admin/roster/:id" element={<InstructorDetail />} />
+      <Route path="/admin/analytics" element={<AdminAnalytics />} />
       <Route path="/admin/reference" element={<ReferencePage />} />
       <Route path="/admin/modules" element={<ModuleLibrary />} />
       <Route path="/admin/courses" element={<CourseBuilder />} />

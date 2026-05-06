@@ -60,7 +60,7 @@ export function AppProvider({ children }) {
 
   // ── Auth ─────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    async function handleSession(session) {
       if (!session?.user) {
         setCurrentInstructor(null)
         setAuthLoading(false)
@@ -76,6 +76,13 @@ export function AppProvider({ children }) {
         setAuthError('Your Google account is not on the instructor roster. Contact your administrator to be added.')
       }
       setAuthLoading(false)
+    }
+
+    // Resolve initial session immediately — onAuthStateChange alone may not fire synchronously
+    supabase.auth.getSession().then(({ data: { session } }) => handleSession(session))
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session)
     })
     return () => subscription.unsubscribe()
   }, [])

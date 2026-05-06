@@ -135,10 +135,11 @@ function ModuleForm({ initial, onSave, onCancel, allModules }) {
 
 export default function ModuleLibrary() {
   const navigate = useNavigate()
-  const { modules, addModule, updateModule, deleteModule } = useApp()
+  const { modules, courses, addModule, updateModule, deleteModule } = useApp()
 
   const [showCreate, setShowCreate]       = useState(false)
   const [editing, setEditing]             = useState(null)
+  const [viewing, setViewing]             = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleteError, setDeleteError]     = useState(null)
   const [search, setSearch]               = useState('')
@@ -351,8 +352,8 @@ export default function ModuleLibrary() {
               >
                 <div
                   className="card"
-                  onClick={selectMode ? () => toggleSelect(mod.id) : undefined}
-                  style={{ padding: '14px 16px', cursor: selectMode ? 'pointer' : 'default', background: isSelected ? 'rgba(124,106,247,0.08)' : undefined, border: isSelected ? '1px solid var(--accent-border)' : undefined }}
+                  onClick={selectMode ? () => toggleSelect(mod.id) : () => setViewing(mod)}
+                  style={{ padding: '14px 16px', cursor: 'pointer', background: isSelected ? 'rgba(124,106,247,0.08)' : undefined, border: isSelected ? '1px solid var(--accent-border)' : undefined }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     {/* Checkbox in select mode */}
@@ -457,6 +458,80 @@ export default function ModuleLibrary() {
         )}
       </BottomSheet>
 
+      {/* Module detail */}
+      <BottomSheet isOpen={!!viewing} onClose={() => setViewing(null)} title="Module Details">
+        {viewing && (() => {
+          const usedIn = courses.filter(c => (c.days || []).some(d => d.moduleId === viewing.id))
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Name + duration */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)' }}>
+                  {viewing.name}
+                </div>
+                <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 15, padding: '4px 12px', borderRadius: 'var(--radius-full)', background: 'var(--surface-xs)', color: 'var(--text-2)', border: '1px solid var(--border-dim)', flexShrink: 0 }}>
+                  {viewing.durationHours}h
+                </span>
+              </div>
+
+              {/* Description */}
+              {viewing.description && (
+                <div>
+                  <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-4)', marginBottom: 6 }}>Description</div>
+                  <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>{viewing.description}</div>
+                </div>
+              )}
+
+              {/* Tags */}
+              {(viewing.tags || []).length > 0 && (
+                <div>
+                  <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-4)', marginBottom: 8 }}>Tags</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {viewing.tags.map(t => (
+                      <span key={t} style={{ fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '4px 10px', borderRadius: 'var(--radius-full)', background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Used in courses */}
+              <div>
+                <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-4)', marginBottom: 8 }}>Used in Courses</div>
+                {usedIn.length === 0 ? (
+                  <div style={{ fontSize: 13, color: 'var(--text-4)', fontStyle: 'italic' }}>Not assigned to any course yet.</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {usedIn.map(c => {
+                      const dayIdx = (c.days || []).findIndex(d => d.moduleId === viewing.id)
+                      return (
+                        <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--surface-xs)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-dim)' }}>
+                          <div style={{ width: 10, height: 10, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 12, color: c.color }}>{c.code}</span>
+                            <span style={{ fontSize: 13, color: 'var(--text-2)', marginLeft: 6 }}>{c.name}</span>
+                          </div>
+                          {dayIdx >= 0 && (
+                            <span style={{ fontSize: 11, fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-4)', flexShrink: 0 }}>M{dayIdx + 1}</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { setEditing(viewing); setViewing(null) }}>Edit Module</button>
+                <button className="btn btn-ghost" style={{ flex: 1, color: 'var(--red)' }} onClick={() => { setConfirmDelete(viewing); setDeleteError(null); setViewing(null) }}>Delete</button>
+              </div>
+            </div>
+          )
+        })()}
+      </BottomSheet>
+
       {/* Bulk delete confirm */}
       <BottomSheet isOpen={showBulkDelete} onClose={() => setShowBulkDelete(false)} title={`Delete ${selected.size} module${selected.size !== 1 ? 's' : ''}?`}>
         <div>
@@ -471,7 +546,7 @@ export default function ModuleLibrary() {
       </BottomSheet>
 
       {/* Next step bar */}
-      {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !confirmDelete && !showSort && !showBulkDelete && (
+      {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !viewing && !confirmDelete && !showSort && !showBulkDelete && (
         <div style={{
           position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
           left: 0, right: 0, padding: '8px 16px',

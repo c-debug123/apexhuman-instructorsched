@@ -72,7 +72,7 @@ export default function BottomNav({ role }) {
   if (role === 'admin') {
     const isCalendar  = pathname.startsWith('/admin/calendar')
     const isRoster    = pathname.startsWith('/admin/roster')
-    const isReference = pathname.startsWith('/admin/reference')
+    const isReference = pathname.startsWith('/admin/reference') || pathname.startsWith('/admin/analytics')
     const isDashboard = !isCalendar && !isRoster && !isReference
     return (
       <nav className="bottom-nav" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>

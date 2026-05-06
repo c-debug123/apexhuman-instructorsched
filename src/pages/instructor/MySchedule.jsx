@@ -27,9 +27,14 @@ export default function MySchedule() {
   }, {})
   const dates = Object.keys(grouped).sort()
 
-  function confirmUnclaim() {
+  function unclaimWithinWindow() {
     if (pendingUnclaim?.claim) removeClaim(pendingUnclaim.claim.id)
     setPendingUnclaim(null)
+  }
+
+  function isWithinUnclaimWindow(slot) {
+    const claimedAt = slot?.claim?.claimedAt
+    return claimedAt && (Date.now() - new Date(claimedAt).getTime()) < 30000
   }
 
   return (
@@ -124,21 +129,49 @@ export default function MySchedule() {
       </div>
 
       {/* Unclaim confirmation */}
-      <BottomSheet isOpen={!!pendingUnclaim} onClose={() => setPendingUnclaim(null)} title="Remove this slot?">
-        {pendingUnclaim && (
-          <div>
-            <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
-              {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
-              {formatDate(pendingUnclaim.date)}<br /><br />
-              This slot will become available for other instructors.
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>Remove</button>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
-            </div>
-          </div>
-        )}
-      </BottomSheet>
+      {pendingUnclaim && (() => {
+        const withinWindow = isWithinUnclaimWindow(pendingUnclaim)
+        return (
+          <BottomSheet
+            isOpen
+            onClose={() => setPendingUnclaim(null)}
+            title={withinWindow ? 'Remove this slot?' : 'Cannot undo claim'}
+          >
+            {withinWindow ? (
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
+                  {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
+                  {formatDate(pendingUnclaim.date)}<br /><br />
+                  This slot will become available for other instructors.
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-danger" style={{ flex: 1 }} onClick={unclaimWithinWindow}>Remove</button>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, padding: '12px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>
+                    The 30-second cancellation window has passed.
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.6 }}>
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-1)' }}>
+                    {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}
+                  </span><br />
+                  {formatDate(pendingUnclaim.date)} · Section {pendingUnclaim.section}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
+                  To cancel this booking, please email the program coordinator to request removal.
+                </div>
+                <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setPendingUnclaim(null)}>Got it</button>
+              </div>
+            )}
+          </BottomSheet>
+        )
+      })()}
 
       <BottomNav role="instructor" />
     </div>

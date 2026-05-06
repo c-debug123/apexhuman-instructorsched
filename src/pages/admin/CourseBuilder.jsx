@@ -824,7 +824,7 @@ export default function CourseBuilder() {
                     const grp      = (dc.groups || []).find(g => (g.dayIndexes || []).includes(i))
                     const grpColor = grp?.color || null
                     return (
-                      <div key={slot.id || i} className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: grpColor ? `3px solid ${grpColor}` : undefined }}>
+                      <div key={slot.id || i} className="card" style={{ padding: '11px 14px', display: 'flex', alignItems: 'center', gap: 12, borderLeft: grp ? `3px solid ${grpColor || 'var(--accent)'}` : undefined }}>
                         <div style={{
                           width: 28, height: 22, borderRadius: 'var(--radius-sm)', flexShrink: 0,
                           background: grpColor ? `${grpColor}20` : 'var(--accent-dim)',
@@ -846,7 +846,7 @@ export default function CourseBuilder() {
                           )}
                         </div>
                         {grp && (
-                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: `${grpColor}20`, color: grpColor, border: `1px solid ${grpColor}`, flexShrink: 0 }}>
+                          <span style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, padding: '2px 8px', borderRadius: 'var(--radius-full)', background: grpColor ? `${grpColor}20` : 'var(--accent-dim)', color: grpColor || 'var(--accent)', border: `1px solid ${grpColor || 'var(--accent-border)'}`, flexShrink: 0 }}>
                             {grp.name}
                           </span>
                         )}

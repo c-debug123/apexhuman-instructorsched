@@ -7,6 +7,69 @@ import BottomSheet from '../../components/BottomSheet'
 import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
+function calDates(date, startTime, durationHours) {
+  const d = date.replace(/-/g, '')
+  if (!startTime) {
+    const [y, mo, dy] = date.split('-').map(Number)
+    const next = new Date(y, mo - 1, dy + 1)
+    const nd = `${next.getFullYear()}${String(next.getMonth()+1).padStart(2,'0')}${String(next.getDate()).padStart(2,'0')}`
+    return `${d}/${nd}`
+  }
+  const [h, m] = startTime.split(':').map(Number)
+  const totalMins = h * 60 + m + Math.round((durationHours || 1) * 60)
+  const eh = String(Math.floor(totalMins / 60) % 24).padStart(2, '0')
+  const em = String(totalMins % 60).padStart(2, '0')
+  return `${d}T${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}00/${d}T${eh}${em}00`
+}
+
+function buildGCalUrl(slot) {
+  const title    = encodeURIComponent(`${slot.moduleName || slot.instructorType} — ${slot.course?.name || ''}`)
+  const dates    = calDates(slot.date, slot.startTime, slot.durationHours)
+  const location = encodeURIComponent([slot.room, slot.address].filter(Boolean).join(', '))
+  const details  = encodeURIComponent(`Section ${slot.section} · Module ${slot.day}`)
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`
+}
+
+function buildIcs(slots) {
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ApexHuman//Instructor//EN']
+  for (const slot of slots) {
+    const d = slot.date.replace(/-/g, '')
+    let dtstart, dtend
+    if (slot.startTime) {
+      const [h, m] = slot.startTime.split(':').map(Number)
+      const totalMins = h * 60 + m + Math.round((slot.durationHours || 1) * 60)
+      const eh = String(Math.floor(totalMins / 60) % 24).padStart(2, '0')
+      const em = String(totalMins % 60).padStart(2, '0')
+      dtstart = `DTSTART:${d}T${String(h).padStart(2,'0')}${String(m).padStart(2,'0')}00`
+      dtend   = `DTEND:${d}T${eh}${em}00`
+    } else {
+      const [y, mo, dy] = slot.date.split('-').map(Number)
+      const next = new Date(y, mo - 1, dy + 1)
+      const nd = `${next.getFullYear()}${String(next.getMonth()+1).padStart(2,'0')}${String(next.getDate()).padStart(2,'0')}`
+      dtstart = `DTSTART;VALUE=DATE:${d}`
+      dtend   = `DTEND;VALUE=DATE:${nd}`
+    }
+    const location = [slot.room, slot.address].filter(Boolean).join(', ')
+    lines.push('BEGIN:VEVENT')
+    lines.push(`UID:${slot.id}-${Date.now()}@apexhuman`)
+    lines.push(dtstart, dtend)
+    lines.push(`SUMMARY:${slot.moduleName || slot.instructorType} — ${slot.course?.name || ''}`)
+    if (location) lines.push(`LOCATION:${location}`)
+    lines.push(`DESCRIPTION:Section ${slot.section} · Module ${slot.day}`)
+    lines.push('END:VEVENT')
+  }
+  lines.push('END:VCALENDAR')
+  return lines.join('\r\n')
+}
+
+function downloadIcs(slots) {
+  const blob = new Blob([buildIcs(slots)], { type: 'text/calendar;charset=utf-8' })
+  const url  = URL.createObjectURL(blob)
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'class-schedule.ics' })
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function SlotBrowser() {
   const { claims, addClaim, removeClaim, instructors, courses, modules, currentInstructor } = useApp()
   const name         = currentInstructor?.name || ''
@@ -16,7 +79,9 @@ export default function SlotBrowser() {
   const [eligibleOnly, setEligibleOnly]       = useState(false)
   const [myBookingsOnly, setMyBookingsOnly]   = useState(false)
   const [showCoursePicker, setShowCoursePicker] = useState(false)
+  const [availabilityCheck, setAvailabilityCheck] = useState(null)
   const [pendingClaim, setPendingClaim]       = useState(null)
+  const [claimedBundle, setClaimedBundle]     = useState(null)
   const [conflictSlot, setConflictSlot]       = useState(null)
   const [pendingUnclaim, setPendingUnclaim]   = useState(null)
 
@@ -62,7 +127,7 @@ export default function SlotBrowser() {
         return
       }
     }
-    setPendingClaim(slot)
+    setAvailabilityCheck(slot)
   }
 
   function confirmClaim() {
@@ -85,6 +150,7 @@ export default function SlotBrowser() {
       }
     })
     setPendingClaim(null)
+    setClaimedBundle(bundleSlots)
   }
 
   function confirmUnclaim() {
@@ -200,7 +266,73 @@ export default function SlotBrowser() {
         </div>
       </div>
 
-      {/* Claim confirmation */}
+      {/* Availability check — step 1 before claiming */}
+      <BottomSheet
+        isOpen={!!availabilityCheck}
+        onClose={() => setAvailabilityCheck(null)}
+        title="Confirm your availability"
+      >
+        {availabilityCheck && (() => {
+          const bundleSlots = getBundleSlots(availabilityCheck)
+          return (
+            <div>
+              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.5 }}>
+                Are you available to teach on the following?
+              </div>
+              <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {bundleSlots.map(bs => {
+                  const timeLabel = bs.startTime
+                    ? (() => {
+                        const [h, m] = bs.startTime.split(':').map(Number)
+                        const totalMins = h * 60 + m + Math.round((bs.durationHours || 1) * 60)
+                        const eh = Math.floor(totalMins / 60) % 24
+                        const em = totalMins % 60
+                        const fmt = (hh, mm) => {
+                          const ampm = hh >= 12 ? 'PM' : 'AM'
+                          const h12  = hh % 12 || 12
+                          return `${h12}:${String(mm).padStart(2,'0')} ${ampm}`
+                        }
+                        return `${fmt(h, m)} – ${fmt(eh, em)}`
+                      })()
+                    : null
+                  const location = [bs.room, bs.address].filter(Boolean).join(' · ')
+                  return (
+                    <div key={bs.id} className="card" style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--teal)', flexShrink: 0 }} />
+                        <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)' }}>
+                          {formatDate(bs.date)}
+                          {bundleSlots.length > 1 && <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 400, marginLeft: 6 }}>M{bs.day}</span>}
+                        </span>
+                      </div>
+                      {timeLabel && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 14 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{timeLabel}</span>
+                        </div>
+                      )}
+                      {location && (
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, paddingLeft: 14 }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round" style={{ marginTop: 1, flexShrink: 0 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <span style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.4 }}>{location}</span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-teal" style={{ flex: 1 }} onClick={() => { setPendingClaim(availabilityCheck); setAvailabilityCheck(null) }}>
+                  Yes, I'm available
+                </button>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setAvailabilityCheck(null)}>Not available</button>
+              </div>
+            </div>
+          )
+        })()}
+      </BottomSheet>
+
+      {/* Claim confirmation — step 2 */}
       <BottomSheet
         isOpen={!!pendingClaim}
         onClose={() => setPendingClaim(null)}
@@ -281,39 +413,121 @@ export default function SlotBrowser() {
       </BottomSheet>
 
       {/* Unclaim confirmation */}
+      {pendingUnclaim && (() => {
+        const bundleSlots  = getBundleSlots(pendingUnclaim)
+        const isBundle     = !!pendingUnclaim.bundleGroup
+        const bundleLabel  = isBundle ? bundleSlots.map(bs => `M${bs.day}`).join(' + ') : null
+        const claimedAt    = pendingUnclaim.claim?.claimedAt
+        const withinWindow = claimedAt && (Date.now() - new Date(claimedAt).getTime()) < 30000
+        return (
+          <BottomSheet
+            isOpen
+            onClose={() => setPendingUnclaim(null)}
+            title={withinWindow ? (isBundle ? 'Remove this bundle?' : 'Remove this slot?') : 'Cannot undo claim'}
+          >
+            {withinWindow ? (
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.6 }}>
+                  {isBundle ? (
+                    <>
+                      <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 6 }}>
+                        {pendingUnclaim.course?.name} — Bundle {bundleLabel}
+                      </div>
+                      <div>Section {pendingUnclaim.section} · All {bundleSlots.length} modules will be released.</div>
+                    </>
+                  ) : (
+                    <>
+                      {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
+                      {formatDate(pendingUnclaim.date)}
+                    </>
+                  )}
+                  <div style={{ marginTop: 8 }}>This slot{isBundle ? 's' : ''} will become available for other instructors.</div>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>
+                    {isBundle ? `Remove Bundle (${bundleSlots.length})` : 'Remove'}
+                  </button>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, padding: '12px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>
+                    The 30-second cancellation window has passed.
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.6 }}>
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-1)' }}>
+                    {isBundle ? `${pendingUnclaim.course?.name} — Bundle ${bundleLabel}` : `${pendingUnclaim.course?.name} — Module ${pendingUnclaim.day}`}
+                  </span><br />
+                  {formatDate(pendingUnclaim.date)} · Section {pendingUnclaim.section}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
+                  To cancel this booking, please email the program coordinator to request removal.
+                </div>
+                <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setPendingUnclaim(null)}>Got it</button>
+              </div>
+            )}
+          </BottomSheet>
+        )
+      })()}
+
+      {/* Post-claim: add to calendar */}
       <BottomSheet
-        isOpen={!!pendingUnclaim}
-        onClose={() => setPendingUnclaim(null)}
-        title={pendingUnclaim?.bundleGroup ? 'Remove this bundle?' : 'Remove this slot?'}
+        isOpen={!!claimedBundle}
+        onClose={() => setClaimedBundle(null)}
+        title="Slot claimed!"
       >
-        {pendingUnclaim && (() => {
-          const bundleSlots = getBundleSlots(pendingUnclaim)
-          const isBundle    = !!pendingUnclaim.bundleGroup
-          const bundleLabel = isBundle ? bundleSlots.map(bs => `M${bs.day}`).join(' + ') : null
+        {claimedBundle && (() => {
+          const isBundle = claimedBundle.length > 1
+          const first    = claimedBundle[0]
           return (
             <div>
-              <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 16, lineHeight: 1.6 }}>
-                {isBundle ? (
-                  <>
-                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 14, color: 'var(--text-1)', marginBottom: 6 }}>
-                      {pendingUnclaim.course?.name} — Bundle {bundleLabel}
-                    </div>
-                    <div>Section {pendingUnclaim.section} · All {bundleSlots.length} modules will be released.</div>
-                  </>
-                ) : (
-                  <>
-                    {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}, Section {pendingUnclaim.section}<br />
-                    {formatDate(pendingUnclaim.date)}
-                  </>
-                )}
-                <div style={{ marginTop: 8 }}>This slot{isBundle ? 's' : ''} will become available for other instructors.</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, padding: '12px 14px', background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span style={{ fontSize: 13, color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                  {isBundle
+                    ? `${claimedBundle.length} modules claimed — ${first.course?.name}`
+                    : `${first.moduleName || first.instructorType} · ${formatDate(first.date)}`}
+                </span>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmUnclaim}>
-                  {isBundle ? `Remove Bundle (${bundleSlots.length})` : 'Remove'}
+
+              <div style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-3)', marginBottom: 10 }}>
+                Add to your calendar
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+                {/* iCal — always one download for all events */}
+                <button
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}
+                  onClick={() => downloadIcs(claimedBundle)}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  Save to Calendar (.ics)
                 </button>
-                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
+
+                {/* Google Calendar — one link per slot */}
+                {claimedBundle.map((slot, i) => (
+                  <a
+                    key={slot.id}
+                    href={buildGCalUrl(slot)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-ghost"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none', color: 'var(--text-1)' }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    {isBundle
+                      ? `Add M${slot.day} to Google Calendar (${formatDate(slot.date)})`
+                      : 'Add to Google Calendar'}
+                  </a>
+                ))}
               </div>
+
+              <button className="btn btn-ghost" style={{ width: '100%' }} onClick={() => setClaimedBundle(null)}>Done</button>
             </div>
           )
         })()}
