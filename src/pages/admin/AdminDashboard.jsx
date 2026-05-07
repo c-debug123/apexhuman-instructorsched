@@ -22,9 +22,7 @@ function LockIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 }
 
-const INSTRUCTOR_URL = window.location.hostname.includes('localhost')
-  ? `${window.location.origin}/?role=instructor`
-  : 'https://apexhuman-instructor.vercel.app'
+const INSTRUCTOR_URL = `${window.location.origin}/?role=instructor`
 
 function SetupStep({ number, label, sublabel, count, onClick, locked, cta }) {
   return (
@@ -122,18 +120,20 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
               Apex Humans
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <button
-                onClick={() => window.open(INSTRUCTOR_URL, '_blank')}
+              <a
+                href={INSTRUCTOR_URL}
+                target="_blank"
+                rel="noreferrer"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
                   borderRadius: 'var(--radius-full)', padding: '4px 10px',
                   color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
-                  cursor: 'pointer', transition: 'all 150ms',
+                  cursor: 'pointer', transition: 'all 150ms', textDecoration: 'none',
                 }}
               >
                 <ExternalLinkIcon /> Instructor Link
-              </button>
+              </a>
               {(cohorts.length > 0 || claims.length > 0 || modules.length > 0 || instructors.length > 0 || courses.some(c => c.days?.length > 0)) && (
                 <button
                   onClick={() => setShowReset(true)}

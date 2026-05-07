@@ -45,9 +45,7 @@ function SortIcon() {
   )
 }
 
-const INSTRUCTOR_URL = window.location.hostname.includes('localhost')
-  ? `${window.location.origin}/?role=instructor`
-  : 'https://apexhuman-instructor.vercel.app'
+const INSTRUCTOR_URL = `${window.location.origin}/?role=instructor`
 
 function InstructorForm({ initial, instructors, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
@@ -238,18 +236,21 @@ export default function InstructorRoster() {
                   <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', margin: 0, whiteSpace: 'nowrap' }}>
                     Instructor Roster
                   </h1>
-                  <button
-                    onClick={() => window.open(INSTRUCTOR_URL, '_blank')}
+                  <a
+                    href={INSTRUCTOR_URL}
+                    target="_blank"
+                    rel="noreferrer"
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 5,
                       background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
                       borderRadius: 'var(--radius-full)', padding: '4px 10px',
                       color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
                       cursor: 'pointer', transition: 'all 150ms', whiteSpace: 'nowrap', flexShrink: 0,
+                      textDecoration: 'none',
                     }}
                   >
                     <ExternalLinkIcon /> Instructor Link
-                  </button>
+                  </a>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
