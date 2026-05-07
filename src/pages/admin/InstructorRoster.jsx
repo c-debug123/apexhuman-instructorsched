@@ -229,11 +229,11 @@ export default function InstructorRoster() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 22, color: 'var(--text-1)', margin: 0 }}>
-                  Instructor Roster
-                </h1>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', margin: 0, whiteSpace: 'nowrap' }}>
+                    Instructor Roster
+                  </h1>
                   <button
                     onClick={() => window.open(INSTRUCTOR_URL, '_blank')}
                     style={{
@@ -241,11 +241,13 @@ export default function InstructorRoster() {
                       background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
                       borderRadius: 'var(--radius-full)', padding: '4px 10px',
                       color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
-                      cursor: 'pointer', transition: 'all 150ms',
+                      cursor: 'pointer', transition: 'all 150ms', whiteSpace: 'nowrap', flexShrink: 0,
                     }}
                   >
                     <ExternalLinkIcon /> Instructor Link
                   </button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
                   <button onClick={() => setShowSort(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}>
                     <SortIcon /> Sort
                   </button>
