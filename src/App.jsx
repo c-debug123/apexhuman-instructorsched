@@ -2,8 +2,19 @@ import AdminApp from './AdminApp'
 import InstructorApp from './InstructorApp'
 
 function detectRole() {
-  // URL param always wins — lets the instructor link work from the admin domain
+  const hostname = window.location.hostname
   const param = new URLSearchParams(window.location.search).get('role')
+
+  // Dedicated admin subdomain — always admin, ignore any stored role
+  if (hostname.includes('admin')) {
+    if (param === 'instructor') return 'instructor' // explicit override for the link
+    return 'admin'
+  }
+
+  // Dedicated instructor subdomain — always instructor
+  if (hostname.includes('instructor')) return 'instructor'
+
+  // localhost: URL param sets and persists the role
   if (param === 'instructor') {
     localStorage.setItem('apex_role', 'instructor')
     return 'instructor'
@@ -12,13 +23,8 @@ function detectRole() {
     localStorage.removeItem('apex_role')
     return 'admin'
   }
-  // Persisted role survives OAuth double-redirects and URL cleanup
   const stored = localStorage.getItem('apex_role')
   if (stored) return stored
-  // Fall back to hostname for dedicated subdomain deployments
-  const hostname = window.location.hostname
-  if (hostname.includes('instructor')) return 'instructor'
-  if (hostname.includes('admin')) return 'admin'
   return 'admin'
 }
 
