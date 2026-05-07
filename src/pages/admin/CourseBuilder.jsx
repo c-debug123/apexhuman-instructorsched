@@ -456,12 +456,13 @@ export default function CourseBuilder() {
   const [editCourse, setEditCourse]   = useState(null)
   const [detailCourse, setDetailCourse] = useState(null)
 
-  const [name, setName]           = useState('')
-  const [code, setCode]           = useState('')
-  const [fullTitle, setFullTitle] = useState('')
-  const [color, setColor]         = useState(COLORS[0])
-  const [slots, setSlots]         = useState([])
-  const [groups, setGroups]       = useState([])
+  const [name, setName]               = useState('')
+  const [code, setCode]               = useState('')
+  const [fullTitle, setFullTitle]     = useState('')
+  const [description, setDescription] = useState('')
+  const [color, setColor]             = useState(COLORS[0])
+  const [slots, setSlots]             = useState([])
+  const [groups, setGroups]           = useState([])
 
   const [showPicker, setShowPicker]       = useState(false)
   const [editSlot, setEditSlot]           = useState(null)
@@ -520,13 +521,13 @@ export default function CourseBuilder() {
 
   function openCreate() {
     setEditCourse(null)
-    setName(''); setCode(''); setFullTitle(''); setColor(nextAvailableColor()); setSlots([]); setGroups([])
+    setName(''); setCode(''); setFullTitle(''); setDescription(''); setColor(nextAvailableColor()); setSlots([]); setGroups([])
     setView('edit')
   }
 
   function openEdit(course) {
     setEditCourse(course)
-    setName(course.name); setCode(course.code); setFullTitle(course.fullTitle || ''); setColor(course.color || COLORS[0])
+    setName(course.name); setCode(course.code); setFullTitle(course.fullTitle || ''); setDescription(course.description || ''); setColor(course.color || COLORS[0])
     setSlots(course.days || []); setGroups(course.groups || [])
     setView('edit')
   }
@@ -545,7 +546,7 @@ export default function CourseBuilder() {
 
   function handleSave() {
     if (!name.trim() || !code.trim() || hasDup) return
-    const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), color, days: slots, groups }
+    const payload = { name: name.trim(), code: code.trim().toUpperCase(), fullTitle: fullTitle.trim(), description: description.trim(), color, days: slots, groups }
     if (editCourse) {
       const updated = { ...editCourse, ...payload }
       updateCourse(updated)
@@ -793,6 +794,9 @@ export default function CourseBuilder() {
                     {dc.fullTitle && (
                       <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{dc.fullTitle}</div>
                     )}
+                    {dc.description && (
+                      <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}>{dc.description}</div>
+                    )}
                   </div>
                 </div>
                 <button
@@ -969,6 +973,17 @@ export default function CourseBuilder() {
                     style={{ borderColor: dupTitle ? 'var(--red)' : undefined }}
                   />
                   {dupTitle && <DupWarning text="A course with this title already exists" />}
+                </div>
+                <div>
+                  <label style={labelStyle}>Description (optional)</label>
+                  <textarea
+                    className="input"
+                    placeholder="What does this course cover?"
+                    value={description}
+                    onChange={e => setDescription(e.target.value)}
+                    rows={3}
+                    style={{ resize: 'vertical' }}
+                  />
                 </div>
                 <div>
                   <label style={labelStyle}>Course colour</label>

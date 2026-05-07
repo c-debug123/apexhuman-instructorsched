@@ -13,6 +13,14 @@ const SORT_OPTIONS = [
   { value: 'claims-desc',  label: 'Most slots claimed' },
 ]
 
+function ExternalLinkIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  )
+}
 function EditIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -226,6 +234,18 @@ export default function InstructorRoster() {
                   Instructor Roster
                 </h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    onClick={() => window.open(INSTRUCTOR_URL, '_blank')}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      background: 'rgba(45,212,191,0.12)', border: '1px solid rgba(45,212,191,0.3)',
+                      borderRadius: 'var(--radius-full)', padding: '4px 10px',
+                      color: 'var(--teal)', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 11,
+                      cursor: 'pointer', transition: 'all 150ms',
+                    }}
+                  >
+                    <ExternalLinkIcon /> Instructor Link
+                  </button>
                   <button onClick={() => setShowSort(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}>
                     <SortIcon /> Sort
                   </button>
