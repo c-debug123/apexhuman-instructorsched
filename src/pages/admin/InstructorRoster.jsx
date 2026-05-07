@@ -45,6 +45,10 @@ function SortIcon() {
   )
 }
 
+const INSTRUCTOR_URL = window.location.hostname.includes('localhost')
+  ? `${window.location.origin}/?role=instructor`
+  : 'https://apexhuman-instructor.vercel.app'
+
 function InstructorForm({ initial, instructors, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
   const [email, setEmail]   = useState(initial?.email || '')
@@ -247,26 +251,28 @@ export default function InstructorRoster() {
                     <ExternalLinkIcon /> Instructor Link
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
-                  <button onClick={() => setShowSort(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}>
-                    <SortIcon /> Sort
-                  </button>
-                  {instructorList.length > 0 && (
-                    <button onClick={() => setSelectMode(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, padding: '4px 0' }}>
-                      Select
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-3)' }}>
+                    {instructorList.length === 0
+                      ? 'No instructors added yet'
+                      : `${instructorList.length} instructor${instructorList.length !== 1 ? 's' : ''} registered`}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => setShowSort(true)} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-xs)', border: '1px solid var(--border-dim)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--text-3)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}>
+                      <SortIcon /> Sort
                     </button>
-                  )}
+                    {instructorList.length > 0 && (
+                      <button onClick={() => setSelectMode(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, padding: '4px 0' }}>
+                        Select
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
 
             {!selectMode && (
               <>
-                <p style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 12, lineHeight: 1.4 }}>
-                  {instructorList.length === 0
-                    ? 'No instructors added yet. Add instructors and set their eligible modules.'
-                    : `${instructorList.length} instructor${instructorList.length !== 1 ? 's' : ''} registered`}
-                </p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <SearchInput placeholder="Search instructors..." value={search} onChange={setSearch} />
                   <button className="btn btn-primary" onClick={() => setShowCreate(true)} style={{ whiteSpace: 'nowrap' }}>+ Add</button>
