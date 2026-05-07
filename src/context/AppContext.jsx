@@ -94,7 +94,7 @@ export function AppProvider({ children }) {
       provider: 'google',
       options: { redirectTo: window.location.origin },
     })
-    if (error) setAuthError(error.message)
+    if (error) setAuthError('Sign-in failed. Please try again or contact your administrator.')
   }, [])
 
   const signOut = useCallback(async () => {

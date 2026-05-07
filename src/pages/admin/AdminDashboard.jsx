@@ -426,6 +426,10 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
   const dayCount = course.days?.length || 0
   const firstDate = slots[0]?.date || cohort.startDate
   const lastDate  = slots[slots.length - 1]?.date || (dayCount > 1 ? addDays(cohort.startDate, dayCount - 1) : cohort.startDate)
+  const firstWithLocation = slots.find(s => s.room || s.address)
+  const locationLabel = firstWithLocation
+    ? [firstWithLocation.room, firstWithLocation.address].filter(Boolean).join(' · ')
+    : null
   const total    = cohort.sections * dayCount
   const filled   = claims.filter(cl => cl.cohortId === cohort.id).length
   const pct      = total > 0 ? (filled / total) * 100 : 0
@@ -534,10 +538,16 @@ function CohortCard({ cohort, courses, claims, onClick, onDelete, onEdit }) {
                 {cohort.sections} section{cohort.sections !== 1 ? 's' : ''}
               </span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: locationLabel ? 3 : 6 }}>
               {formatDateShort(firstDate)} – {formatDateShort(lastDate)}
               {dayCount > 0 && <> · {dayCount} module{dayCount !== 1 ? 's' : ''}</>}
             </div>
+            {locationLabel && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span style={{ fontSize: 11, color: 'var(--text-4)' }}>{locationLabel}</span>
+              </div>
+            )}
             {cohort.createdAt && (
               <div style={{ fontSize: 11, color: 'var(--text-4)', marginBottom: 10 }}>
                 Created {new Date(cohort.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
