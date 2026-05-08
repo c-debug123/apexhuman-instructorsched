@@ -35,14 +35,15 @@ function getDayEvents(dateStr, cohorts, courses, modules, claims) {
     const course = courses.find(c => c.id === cohort.courseId)
     if (!course) continue
     const slotDates = cohort.slotDates || []
-    for (const sd of slotDates) {
+    for (let i = 0; i < slotDates.length; i++) {
+      const sd = slotDates[i]
       if (sd.date !== dateStr) continue
-      const courseSlot    = course.days?.[sd.slotIndex]
+      const courseSlot    = course.days?.[i]
       const mod           = modules.find(m => m.id === courseSlot?.moduleId)
       const durationHours = mod?.durationHours || 1
       const startTime     = sd.startTime || '09:00'
       const endTime       = calcEndTime(startTime, durationHours)
-      const sectionClaims = claims.filter(cl => cl.cohortId === cohort.id && cl.day === sd.slotIndex + 1)
+      const sectionClaims = claims.filter(cl => cl.cohortId === cohort.id && cl.day === i + 1)
       events.push({
         cohort,
         course,
