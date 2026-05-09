@@ -310,7 +310,13 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
 
       {/* FAB */}
       {cohorts.length > 0 && hasCourses && (
-        <div style={{ position: 'sticky', bottom: 16, display: 'flex', justifyContent: 'flex-end', padding: '0 16px', pointerEvents: 'none' }}>
+        <div style={{
+          position: 'sticky', bottom: 0,
+          display: 'flex', justifyContent: 'flex-end',
+          padding: '40px 16px 16px',
+          pointerEvents: 'none',
+          background: 'linear-gradient(to top, var(--bg) 50%, transparent)',
+        }}>
           <button
             className="btn btn-primary"
             onClick={() => navigate('/admin/cohorts/new')}
