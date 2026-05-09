@@ -92,7 +92,7 @@ export function AppProvider({ children }) {
     localStorage.setItem('apex_role', 'instructor')
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: import.meta.env.VITE_INSTRUCTOR_ORIGIN || 'https://apexhuman-instructor.vercel.app' },
     })
     if (error) setAuthError('Sign-in failed. Please try again or contact your administrator.')
   }, [])
