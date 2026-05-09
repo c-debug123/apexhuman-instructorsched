@@ -83,7 +83,7 @@ export default function BottomNav({ role }) {
           <CalIcon /><span>Calendar</span>
         </button>
         <button className={`nav-tab ${isRoster ? 'active-admin' : ''}`} onClick={() => navigate('/admin/roster')}>
-          <UsersIcon /><span>Roster</span>
+          <UsersIcon /><span>Instructors</span>
         </button>
         <button className={`nav-tab ${isReference ? 'active-admin' : ''}`} onClick={() => navigate('/admin/reference')}>
           <BookIcon /><span>Reference</span>

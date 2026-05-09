@@ -44,7 +44,7 @@ function SortIcon() {
   )
 }
 
-const INSTRUCTOR_URL = `${window.location.origin}/?role=instructor`
+const INSTRUCTOR_URL = import.meta.env.VITE_INSTRUCTOR_URL || `${window.location.origin}/?role=instructor`
 
 function InstructorForm({ initial, instructors, modules, onSave, onCancel }) {
   const [name, setName]     = useState(initial?.name || '')
@@ -233,7 +233,7 @@ export default function InstructorRoster() {
               <div style={{ marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                   <h1 style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', margin: 0, whiteSpace: 'nowrap' }}>
-                    Instructor Roster
+                    Instructors
                   </h1>
                   <a
                     href={INSTRUCTOR_URL}

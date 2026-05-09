@@ -21,7 +21,7 @@ function LockIcon() {
   return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
 }
 
-const INSTRUCTOR_URL = `${window.location.origin}/?role=instructor`
+const INSTRUCTOR_URL = import.meta.env.VITE_INSTRUCTOR_URL || `${window.location.origin}/?role=instructor`
 
 function SetupStep({ number, label, sublabel, count, onClick, locked, cta }) {
   return (
@@ -308,28 +308,6 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
         </div>
       </div>
 
-      {/* FAB */}
-      {cohorts.length > 0 && hasCourses && (
-        <div style={{
-          position: 'sticky', bottom: 0,
-          display: 'flex', justifyContent: 'flex-end',
-          padding: '40px 16px 16px',
-          pointerEvents: 'none',
-          background: 'linear-gradient(to top, var(--bg) 50%, transparent)',
-        }}>
-          <button
-            className="btn btn-primary"
-            onClick={() => navigate('/admin/cohorts/new')}
-            style={{
-              pointerEvents: 'all',
-              borderRadius: 'var(--radius-full)', padding: '12px 20px',
-              boxShadow: '0 4px 24px rgba(124,106,247,0.35)',
-            }}
-          >
-            <PlusIcon /> New Schedule
-          </button>
-        </div>
-      )}
 
       <BottomSheet isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete schedule?">
         <div>
