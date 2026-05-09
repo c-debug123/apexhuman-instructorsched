@@ -781,27 +781,11 @@ export default function CourseBuilder() {
         <div className="z1 page">
           <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
             <div style={{ paddingTop: 8, paddingBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <button onClick={() => { setView('list'); setDetailCourse(null); setEditCourse(null) }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-                  </button>
-                  <div>
-                    <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', lineHeight: 1.2 }}>
-                      {dc.code}: {dc.name}
-                    </div>
-                    {dc.fullTitle && (
-                      <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{dc.fullTitle}</div>
-                    )}
-                    {dc.description && (
-                      <ExpandableText
-                        text={dc.description}
-                        lines={2}
-                        style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}
-                      />
-                    )}
-                  </div>
-                </div>
+              {/* Back row */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <button onClick={() => { setView('list'); setDetailCourse(null); setEditCourse(null) }} style={{ background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', padding: '4px 6px', display: 'flex', marginLeft: -6 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
                 <button
                   className="btn btn-primary"
                   onClick={() => openEdit(dc)}
@@ -810,7 +794,23 @@ export default function CourseBuilder() {
                   Edit
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', paddingLeft: 4 }}>
+              {/* Title block — flush left, aligned with module cards */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontFamily: 'Space Grotesk', fontWeight: 700, fontSize: 20, color: 'var(--text-1)', lineHeight: 1.2 }}>
+                  {dc.code}: {dc.name}
+                </div>
+                {dc.fullTitle && (
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{dc.fullTitle}</div>
+                )}
+                {dc.description && (
+                  <ExpandableText
+                    text={dc.description}
+                    lines={2}
+                    style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}
+                  />
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: dc.color }} />
                 <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
                   {(dc.days || []).length} module{(dc.days || []).length !== 1 ? 's' : ''}
