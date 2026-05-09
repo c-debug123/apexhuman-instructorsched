@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useSlotsForCohort } from '../../hooks/useSlots'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import CourseBadge from '../../components/CourseBadge'
 
@@ -42,7 +41,6 @@ export default function CohortDetail() {
           <div style={{ color: 'var(--text-3)' }}>Cohort not found.</div>
           <button className="btn btn-ghost" onClick={() => navigate('/admin')} style={{ marginTop: 16 }}>Back to Dashboard</button>
         </div>
-        <BottomNav role="admin" />
       </div>
     )
   }
@@ -293,7 +291,6 @@ export default function CohortDetail() {
         </div>
       </BottomSheet>
 
-      <BottomNav role="admin" />
     </div>
   )
 }

@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
 import { addDays } from '../../data/courses'
-import BottomNav from '../../components/BottomNav'
 import CourseBadge from '../../components/CourseBadge'
 
 export default function AdminAnalytics() {
@@ -275,7 +274,6 @@ export default function AdminAnalytics() {
           )}
         </div>
       </div>
-      <BottomNav role="admin" />
     </div>
   )
 }

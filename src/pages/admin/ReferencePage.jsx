@@ -1,6 +1,5 @@
 import { useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
-import BottomNav from '../../components/BottomNav'
 import CourseBadge from '../../components/CourseBadge'
 
 function SectionLabel({ children }) {
@@ -393,7 +392,6 @@ export default function ReferencePage() {
           </div>
         </div>
       </div>
-      <BottomNav role="admin" />
     </div>
   )
 }

@@ -154,9 +154,9 @@ input, textarea, select {
 .progress-track { height: 4px; background: var(--surface-lg); border-radius: 2px; overflow: hidden; }
 .progress-fill  { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
 
-/* Bottom nav */
+/* Bottom nav — in-flow inside 100dvh app shell (not fixed) */
 .bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
+  flex-shrink: 0;
   background: rgba(9,9,15,0.92); border-top: 1px solid var(--border);
   backdrop-filter: blur(16px); display: flex;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
@@ -172,8 +172,8 @@ input, textarea, select {
 .nav-tab.active-admin       { color: var(--accent); }
 .nav-tab.active-instructor  { color: var(--teal); }
 
-/* Page scroll area (clears bottom nav) */
-.page { padding-bottom: calc(72px + max(8px, env(safe-area-inset-bottom))); }
+/* Page scroll area — bottom padding for content breathing room only */
+.page { padding-bottom: 24px; }
 
 /* Animations */
 @keyframes slideUp   { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }

@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
 import SearchInput from '../../components/SearchInput'
@@ -419,7 +418,6 @@ export default function InstructorRoster() {
         </div>
       </BottomSheet>
 
-      <BottomNav role="admin" />
     </div>
   )
 }

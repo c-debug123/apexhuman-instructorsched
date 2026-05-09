@@ -8,7 +8,6 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useApp } from '../../context/AppContext'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
 import SearchInput from '../../components/SearchInput'
@@ -767,7 +766,6 @@ export default function CourseBuilder() {
           </div>
         )}
 
-        <BottomNav role="admin" />
       </div>
     )
   }
@@ -906,7 +904,6 @@ export default function CourseBuilder() {
             )}
           </div>
         </div>
-        <BottomNav role="admin" />
       </div>
     )
   }
@@ -1087,7 +1084,6 @@ export default function CourseBuilder() {
           {editSlot && <LabelForm slot={editSlot} modules={modules || []} onSave={handleEditSlot} onCancel={() => setEditSlot(null)} />}
         </BottomSheet>
 
-        <BottomNav role="admin" />
       </div>
 
       {showPicker && (

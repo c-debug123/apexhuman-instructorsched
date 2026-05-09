@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useSlots } from '../../hooks/useSlots'
 import { formatDate } from '../../data/courses'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
@@ -561,7 +560,6 @@ export default function SlotBrowser() {
         </div>
       </BottomSheet>
 
-      <BottomNav role="instructor" />
     </div>
   )
 }

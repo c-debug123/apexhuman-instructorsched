@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { addDays, formatDate } from '../../data/courses'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
@@ -459,7 +458,6 @@ export default function InstructorCalendarView() {
         )}
       </BottomSheet>
 
-      <BottomNav role="instructor" />
     </div>
   )
 }

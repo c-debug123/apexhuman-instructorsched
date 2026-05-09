@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { addDays, formatDateShort } from '../../data/courses'
-import BottomNav from '../../components/BottomNav'
 import BottomSheet from '../../components/BottomSheet'
 import CourseBadge from '../../components/CourseBadge'
 
@@ -405,7 +404,6 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
         </div>
       </BottomSheet>
 
-      <BottomNav role="admin" />
     </div>
   )
 }
