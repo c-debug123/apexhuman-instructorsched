@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
 import SearchInput from '../../components/SearchInput'
+import ExpandableText from '../../components/ExpandableText'
 
 const COLORS = ['#7c6af7','#ec4899','#f59e0b','#22c55e','#2dd4bf','#3b82f6','#f97316','#a78bfa','#e11d48','#0ea5e9']
 
@@ -793,7 +794,11 @@ export default function CourseBuilder() {
                       <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>{dc.fullTitle}</div>
                     )}
                     {dc.description && (
-                      <div style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}>{dc.description}</div>
+                      <ExpandableText
+                        text={dc.description}
+                        lines={2}
+                        style={{ fontSize: 13, color: 'var(--text-3)', marginTop: 6, lineHeight: 1.5 }}
+                      />
                     )}
                   </div>
                 </div>

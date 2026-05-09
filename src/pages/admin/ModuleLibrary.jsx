@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext'
 import BottomSheet from '../../components/BottomSheet'
 import SwipeableRow from '../../components/SwipeableRow'
 import SearchInput from '../../components/SearchInput'
+import ExpandableText from '../../components/ExpandableText'
 
 const TAG_OPTIONS = ['AI', 'Business', 'Creative', 'Technical', 'Marketing', 'Design', 'Operations']
 
@@ -376,9 +377,11 @@ export default function ModuleLibrary() {
                         </span>
                       </div>
                       {mod.description && (
-                        <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 8, lineHeight: 1.4 }}>
-                          {mod.description}
-                        </div>
+                        <ExpandableText
+                          text={mod.description}
+                          lines={2}
+                          style={{ fontSize: 13, color: 'var(--text-3)', lineHeight: 1.4, marginBottom: 8 }}
+                        />
                       )}
                       {(mod.tags || []).length > 0 && (
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -477,7 +480,11 @@ export default function ModuleLibrary() {
               {viewing.description && (
                 <div>
                   <div style={{ fontSize: 10, fontFamily: 'Space Grotesk', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-4)', marginBottom: 6 }}>Description</div>
-                  <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}>{viewing.description}</div>
+                  <ExpandableText
+                    text={viewing.description}
+                    lines={3}
+                    style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6 }}
+                  />
                 </div>
               )}
 
