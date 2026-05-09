@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useNotifications } from '../hooks/useNotifications'
 
 const TYPE_ICONS = {
@@ -19,6 +20,15 @@ function timeAgo(dateStr) {
 
 export default function NotificationDrawer({ isOpen, onClose }) {
   const { notifications, unreadCount, markRead, markAll } = useNotifications()
+
+  useEffect(() => {
+    if (!isOpen) return
+    const el = document.querySelector('.app-scroll')
+    if (el) el.style.overflow = 'hidden'
+    return () => {
+      if (el) el.style.overflow = ''
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -79,7 +89,12 @@ export default function NotificationDrawer({ isOpen, onClose }) {
         </div>
 
         {/* Notification list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{
+          flex: 1, overflowY: 'auto', padding: '12px 16px',
+          display: 'flex', flexDirection: 'column', gap: 6,
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        }}>
           {notifications.length === 0 ? (
             <div style={{ padding: '40px 0', textAlign: 'center' }}>
               <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.3 }}>○</div>
@@ -106,7 +121,6 @@ export default function NotificationDrawer({ isOpen, onClose }) {
                     cursor: 'pointer', textAlign: 'left', width: '100%',
                   }}
                 >
-                  {/* Type icon */}
                   <div style={{
                     width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
                     background: `${meta.color}1a`, border: `1px solid ${meta.color}33`,

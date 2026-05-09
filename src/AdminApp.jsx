@@ -30,7 +30,7 @@ function AdminShell() {
   if (isLoading) return <LoadingScreen />
   return (
     <div style={SHELL_STYLE}>
-      <div style={SCROLL_STYLE}>
+      <div className="app-scroll" style={SCROLL_STYLE}>
         <Routes>
           <Route path="/" element={<Navigate to="/admin" replace />} />
           <Route path="/admin" element={<AdminDashboard />} />

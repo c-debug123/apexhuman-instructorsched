@@ -2,9 +2,13 @@ import { useEffect } from 'react'
 
 export default function BottomSheet({ isOpen, onClose, children, title }) {
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
+    if (!isOpen) return
+    // Lock the app scroll container (body is never the scroller in our 100dvh shell)
+    const el = document.querySelector('.app-scroll')
+    if (el) el.style.overflow = 'hidden'
+    return () => {
+      if (el) el.style.overflow = ''
+    }
   }, [isOpen])
 
   if (!isOpen) return null
@@ -23,7 +27,10 @@ export default function BottomSheet({ isOpen, onClose, children, title }) {
           border: '1px solid var(--border-md)',
           borderRadius: 'var(--radius-xl) var(--radius-xl) 0 0',
           backdropFilter: 'blur(20px)',
-          maxHeight: '85svh', overflowY: 'auto',
+          maxHeight: '85dvh',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
           paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
         }}
       >

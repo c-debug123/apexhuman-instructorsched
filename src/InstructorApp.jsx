@@ -50,7 +50,7 @@ function InstructorShell() {
   const isSignIn = pathname === '/schedule' || pathname === '/'
   return (
     <div style={SHELL_STYLE}>
-      <div style={SCROLL_STYLE}>
+      <div className="app-scroll" style={SCROLL_STYLE}>
         <Routes>
           <Route path="/" element={<Navigate to="/schedule" replace />} />
           <Route path="/schedule" element={<InstructorGate />} />
