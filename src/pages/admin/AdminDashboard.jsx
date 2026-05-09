@@ -310,18 +310,19 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
 
       {/* FAB */}
       {cohorts.length > 0 && hasCourses && (
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate('/admin/cohorts/new')}
-          style={{
-            position: 'fixed', bottom: 'calc(72px + max(8px, env(safe-area-inset-bottom)) + 12px)',
-            right: 16, zIndex: 30,
-            borderRadius: 'var(--radius-full)', padding: '12px 20px',
-            boxShadow: '0 4px 24px rgba(124,106,247,0.35)',
-          }}
-        >
-          <PlusIcon /> New Schedule
-        </button>
+        <div style={{ position: 'sticky', bottom: 16, display: 'flex', justifyContent: 'flex-end', padding: '0 16px', pointerEvents: 'none' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => navigate('/admin/cohorts/new')}
+            style={{
+              pointerEvents: 'all',
+              borderRadius: 'var(--radius-full)', padding: '12px 20px',
+              boxShadow: '0 4px 24px rgba(124,106,247,0.35)',
+            }}
+          >
+            <PlusIcon /> New Schedule
+          </button>
+        </div>
       )}
 
       <BottomSheet isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Delete schedule?">

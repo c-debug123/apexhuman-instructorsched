@@ -547,10 +547,10 @@ export default function ModuleLibrary() {
       {/* Next step bar */}
       {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !viewing && !confirmDelete && !showSort && !showBulkDelete && (
         <div style={{
-          position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
-          left: 0, right: 0, padding: '8px 16px',
+          position: 'sticky', bottom: 0,
+          padding: '8px 16px',
           background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-          pointerEvents: 'none', zIndex: 50,
+          pointerEvents: 'none', zIndex: 10,
         }}>
           <button
             onClick={() => navigate('/admin/courses')}

@@ -743,10 +743,10 @@ export default function CourseBuilder() {
         {/* Next step bar */}
         {(courses || []).length > 0 && !selectMode && !showPicker && !editSlot && !confirmDelete && !showSort && !editCourse && !detailCourse && (
           <div style={{
-            position: 'fixed', bottom: 'calc(64px + max(0px, env(safe-area-inset-bottom)))',
-            left: 0, right: 0, padding: '8px 16px',
+            position: 'sticky', bottom: 0,
+            padding: '8px 16px',
             background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-            pointerEvents: 'none', zIndex: 50,
+            pointerEvents: 'none', zIndex: 10,
           }}>
             <button
               onClick={() => navigate('/admin/cohorts/new')}
