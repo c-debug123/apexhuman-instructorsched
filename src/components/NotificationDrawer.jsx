@@ -24,10 +24,8 @@ export default function NotificationDrawer({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen) return
     const el = document.querySelector('.app-scroll')
-    if (el) el.style.overflow = 'hidden'
-    return () => {
-      if (el) el.style.overflow = ''
-    }
+    el?.classList.add('scroll-locked')
+    return () => el?.classList.remove('scroll-locked')
   }, [isOpen])
 
   if (!isOpen) return null

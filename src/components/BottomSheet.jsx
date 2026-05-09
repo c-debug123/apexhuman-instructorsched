@@ -3,12 +3,9 @@ import { useEffect } from 'react'
 export default function BottomSheet({ isOpen, onClose, children, title }) {
   useEffect(() => {
     if (!isOpen) return
-    // Lock the app scroll container (body is never the scroller in our 100dvh shell)
     const el = document.querySelector('.app-scroll')
-    if (el) el.style.overflow = 'hidden'
-    return () => {
-      if (el) el.style.overflow = ''
-    }
+    el?.classList.add('scroll-locked')
+    return () => el?.classList.remove('scroll-locked')
   }, [isOpen])
 
   if (!isOpen) return null

@@ -51,8 +51,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Atmospheric backgrounds */
-.admin-bg { position: relative; min-height: 100svh; }
+/* Atmospheric backgrounds — no min-height; ::before covers the full viewport */
+.admin-bg { position: relative; }
 .admin-bg::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -60,7 +60,7 @@ body {
     radial-gradient(ellipse 80% 50% at 15% 0%, rgba(124,106,247,0.09) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 85% 100%, rgba(45,212,191,0.06) 0%, transparent 60%);
 }
-.instructor-bg { position: relative; min-height: 100svh; }
+.instructor-bg { position: relative; }
 .instructor-bg::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
@@ -172,8 +172,11 @@ input, textarea, select {
 .nav-tab.active-admin       { color: var(--accent); }
 .nav-tab.active-instructor  { color: var(--teal); }
 
-/* Page scroll area — bottom padding for content breathing room only */
-.page { padding-bottom: 24px; }
+/* Page scroll area — generous bottom padding so last content is never clipped */
+.page { padding-bottom: 80px; }
+
+/* Scroll lock applied by BottomSheet / NotificationDrawer */
+.app-scroll.scroll-locked { overflow: hidden !important; }
 
 /* Animations */
 @keyframes slideUp   { from { transform: translateY(8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
