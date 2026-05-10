@@ -215,7 +215,7 @@ export default function ModuleLibrary() {
 
   return (
     <div className="admin-bg">
-      <div className="z1 page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      <div className="z1 page">
         <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
 
           {/* Header */}
@@ -251,6 +251,14 @@ export default function ModuleLibrary() {
                   {(modules || []).length > 0 && (
                     <button onClick={() => setSelectMode(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, padding: '4px 0' }}>
                       Select
+                    </button>
+                  )}
+                  {(modules || []).length > 0 && (
+                    <button
+                      onClick={() => navigate('/admin/courses')}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(124,106,247,0.12)', border: '1px solid rgba(124,106,247,0.3)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}
+                    >
+                      Courses <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                   )}
                 </div>
@@ -551,31 +559,6 @@ export default function ModuleLibrary() {
         </div>
       </BottomSheet>
 
-      {/* Next step bar */}
-      {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !viewing && !confirmDelete && !showSort && !showBulkDelete && (
-        <div style={{
-          marginTop: 'auto',
-          padding: '40px 16px 16px',
-          background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-          pointerEvents: 'none',
-        }}>
-          <button
-            onClick={() => navigate('/admin/courses')}
-            style={{
-              width: '100%', pointerEvents: 'all',
-              background: 'var(--surface-md)', border: '1px solid var(--border-md)',
-              borderRadius: 'var(--radius-lg)', padding: '11px 16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-              Next: Build Courses
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      )}
 
     </div>
   )

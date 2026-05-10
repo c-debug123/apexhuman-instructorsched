@@ -591,7 +591,7 @@ export default function CourseBuilder() {
     const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort'
     return (
       <div className="admin-bg">
-        <div className="z1 page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+        <div className="z1 page">
           <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
             <div style={{ paddingTop: 8, paddingBottom: 16 }}>
 
@@ -618,6 +618,14 @@ export default function CourseBuilder() {
                     </button>
                     {(courses || []).length > 0 && (
                       <button onClick={() => setSelectMode(true)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, padding: '4px 0' }}>Select</button>
+                    )}
+                    {(courses || []).length > 0 && (
+                      <button
+                        onClick={() => navigate('/admin/cohorts/new')}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(124,106,247,0.12)', border: '1px solid rgba(124,106,247,0.3)', borderRadius: 'var(--radius-full)', padding: '4px 10px', color: 'var(--accent)', cursor: 'pointer', fontSize: 12, fontFamily: 'Space Grotesk', fontWeight: 600 }}
+                      >
+                        Schedule <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      </button>
                     )}
                   </div>
                 </div>
@@ -741,31 +749,6 @@ export default function CourseBuilder() {
           </div>
         </BottomSheet>
 
-        {/* Next step bar */}
-        {(courses || []).length > 0 && !selectMode && !showPicker && !editSlot && !confirmDelete && !showSort && !editCourse && !detailCourse && (
-          <div style={{
-            marginTop: 'auto',
-            padding: '40px 16px 16px',
-            background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-            pointerEvents: 'none',
-          }}>
-            <button
-              onClick={() => navigate('/admin/cohorts/new')}
-              style={{
-                width: '100%', pointerEvents: 'all',
-                background: 'var(--surface-md)', border: '1px solid var(--border-md)',
-                borderRadius: 'var(--radius-lg)', padding: '11px 16px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                cursor: 'pointer',
-              }}
-            >
-              <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, fontSize: 13, color: 'var(--text-2)' }}>
-                Next: Schedule a Course
-              </span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
-          </div>
-        )}
 
       </div>
     )

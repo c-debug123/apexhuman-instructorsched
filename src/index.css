@@ -175,9 +175,6 @@ input, textarea, select {
 /* Page scroll area — generous bottom padding so last content is never clipped */
 .page { padding-bottom: 80px; }
 
-/* Background wrappers must fill the scroll container so min-height:100% resolves on .page */
-.admin-bg, .instructor-bg { min-height: 100%; }
-
 /* Scroll lock applied by BottomSheet / NotificationDrawer */
 .app-scroll.scroll-locked { overflow: hidden !important; }
 
