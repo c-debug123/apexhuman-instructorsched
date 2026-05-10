@@ -591,7 +591,7 @@ export default function CourseBuilder() {
     const sortLabel = SORT_OPTIONS.find(o => o.value === sortBy)?.label || 'Sort'
     return (
       <div className="admin-bg">
-        <div className="z1 page">
+        <div className="z1 page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
           <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
             <div style={{ paddingTop: 8, paddingBottom: 16 }}>
 
@@ -744,10 +744,10 @@ export default function CourseBuilder() {
         {/* Next step bar */}
         {(courses || []).length > 0 && !selectMode && !showPicker && !editSlot && !confirmDelete && !showSort && !editCourse && !detailCourse && (
           <div style={{
-            position: 'sticky', bottom: 0,
-            padding: '8px 16px',
+            marginTop: 'auto',
+            padding: '40px 16px 16px',
             background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-            pointerEvents: 'none', zIndex: 10,
+            pointerEvents: 'none',
           }}>
             <button
               onClick={() => navigate('/admin/cohorts/new')}

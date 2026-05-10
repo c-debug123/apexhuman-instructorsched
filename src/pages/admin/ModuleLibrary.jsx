@@ -215,7 +215,7 @@ export default function ModuleLibrary() {
 
   return (
     <div className="admin-bg">
-      <div className="z1 page">
+      <div className="z1 page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
         <div className="safe-top" style={{ padding: '0 16px', paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
 
           {/* Header */}
@@ -554,10 +554,10 @@ export default function ModuleLibrary() {
       {/* Next step bar */}
       {(modules || []).length > 0 && !selectMode && !showCreate && !editing && !viewing && !confirmDelete && !showSort && !showBulkDelete && (
         <div style={{
-          position: 'sticky', bottom: 0,
-          padding: '8px 16px',
+          marginTop: 'auto',
+          padding: '40px 16px 16px',
           background: 'linear-gradient(to top, var(--bg) 60%, transparent)',
-          pointerEvents: 'none', zIndex: 10,
+          pointerEvents: 'none',
         }}>
           <button
             onClick={() => navigate('/admin/courses')}
