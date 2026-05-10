@@ -470,7 +470,7 @@ export default function CourseBuilder() {
 
   // List view state
   const [search, setSearch]               = useState('')
-  const [sortBy, setSortBy]               = useState('name-asc')
+  const [sortBy, setSortBy]               = useState('code-asc')
   const [showSort, setShowSort]           = useState(false)
   const [selectMode, setSelectMode]       = useState(false)
   const [selected, setSelected]           = useState(new Set())

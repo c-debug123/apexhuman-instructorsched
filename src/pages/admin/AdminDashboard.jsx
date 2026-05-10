@@ -66,7 +66,7 @@ export default function AdminDashboard() {
   const { cohorts, courses, modules, claims, instructors, resetAll, deleteCohort } = useApp()
   const [showReset, setShowReset]       = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
-  const [sortBy, setSortBy]             = useState('newest')
+  const [sortBy, setSortBy]             = useState('course')
   const [filterCourse, setFilterCourse] = useState(null)
   const [showSort, setShowSort]         = useState(false)
   const [showFilter, setShowFilter]     = useState(false)
@@ -246,10 +246,10 @@ const totalSlots  = cohorts.reduce((s, c) => s + (courses.find(x => x.id === c.c
               </button>
               <button onClick={() => setShowSort(true)} style={{
                 display: 'flex', alignItems: 'center', gap: 4,
-                background: sortBy !== 'newest' ? 'rgba(124,106,247,0.15)' : 'var(--surface-xs)',
-                border: `1px solid ${sortBy !== 'newest' ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
+                background: sortBy !== 'course' ? 'rgba(124,106,247,0.15)' : 'var(--surface-xs)',
+                border: `1px solid ${sortBy !== 'course' ? 'rgba(124,106,247,0.35)' : 'var(--border-dim)'}`,
                 borderRadius: 'var(--radius-full)', padding: '4px 10px',
-                color: sortBy !== 'newest' ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 12,
+                color: sortBy !== 'course' ? 'var(--accent)' : 'var(--text-3)', cursor: 'pointer', fontSize: 12,
                 fontFamily: 'Space Grotesk', fontWeight: 600,
               }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
