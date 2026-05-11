@@ -5,16 +5,7 @@ function detectRole() {
   const hostname = window.location.hostname
   const param = new URLSearchParams(window.location.search).get('role')
 
-  // Dedicated admin subdomain — always admin, ignore any stored role
-  if (hostname.includes('admin')) {
-    if (param === 'instructor') return 'instructor' // explicit override for the link
-    return 'admin'
-  }
-
-  // Dedicated instructor subdomain — always instructor
-  if (hostname.includes('instructor')) return 'instructor'
-
-  // localhost: URL param sets and persists the role
+  // URL param always wins (allows overriding on any deployment)
   if (param === 'instructor') {
     localStorage.setItem('apex_role', 'instructor')
     return 'instructor'
@@ -23,6 +14,15 @@ function detectRole() {
     localStorage.removeItem('apex_role')
     return 'admin'
   }
+
+  // Build-time env var set in Vercel project settings
+  if (import.meta.env.VITE_ROLE === 'instructor') return 'instructor'
+  if (import.meta.env.VITE_ROLE === 'admin') return 'admin'
+
+  // Hostname-based detection for custom domains
+  if (hostname.includes('admin')) return 'admin'
+  if (hostname.includes('instructor')) return 'instructor'
+
   const stored = localStorage.getItem('apex_role')
   if (stored) return stored
   return 'admin'
