@@ -24,7 +24,7 @@ export function useSlots({ dayFilter = null, courseFilter = null } = {}) {
           const instructorType = dayDef?.label || module?.name || `Day ${day}`
 
           const claim = claims.find(
-            cl => cl.cohortId === cohort.id && cl.day === day && cl.section === section
+            cl => cl.cohortId === cohort.id && cl.day === day && cl.section === section && cl.status !== 'cancelled'
           )
 
           const courseGroups = course.groups || []
@@ -87,7 +87,7 @@ export function useSlotsForCohort(cohortId) {
         const dayDef = courseDays[dayIdx]
         const module = dayDef?.moduleId ? modules.find(m => m.id === dayDef.moduleId) : null
         const instructorType = dayDef?.label || module?.name || `Day ${day}`
-        const claim  = claims.find(cl => cl.cohortId === cohortId && cl.day === day && cl.section === section)
+        const claim  = claims.find(cl => cl.cohortId === cohortId && cl.day === day && cl.section === section && cl.status !== 'cancelled')
 
         const courseGroups = course?.groups || []
         const rawGroup = courseGroups.find(g => (g.dayIndexes || []).includes(dayIdx)) || null
@@ -131,7 +131,7 @@ export function useStats() {
       const dayCount = course?.days?.length || 5
       return sum + c.sections * dayCount
     }, 0)
-    const filled      = claims.length
+    const filled      = claims.filter(c => c.status !== 'cancelled').length
     const open        = totalSlots - filled
     const courseIds   = new Set(cohorts.map(c => c.courseId))
     return { totalSlots, filled, open, coursesRunning: courseIds.size }

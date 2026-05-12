@@ -19,7 +19,7 @@ function toModule(r)  { return { id: r.id, name: r.name, description: r.descript
 function toCourse(r)  { return { id: r.id, code: r.code, name: r.name, fullTitle: r.full_title, shortName: r.short_name, color: r.color, num: r.num, track: r.track, description: r.description || null, days: r.days || [], groups: r.groups || [], createdAt: r.created_at } }
 function toCohort(r)  { return { id: r.id, courseId: r.course_id, startDate: r.start_date, sections: r.sections, slotDates: r.slot_dates || [], createdAt: r.created_at } }
 function toInstructor(r) { return { id: r.id, name: r.name, email: r.email, phone: r.phone || '', eligibleGroups: r.eligible_groups || [], createdAt: r.created_at } }
-function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at } }
+function toClaim(r)   { return { id: r.id, cohortId: r.cohort_id, day: r.day, section: r.section, date: r.date, instructorType: r.instructor_type, instructorId: r.instructor_id, instructorName: r.instructor_name, claimedAt: r.created_at, status: r.status || 'confirmed', cancelledAt: r.cancelled_at || null, cancelledBy: r.cancelled_by || null, cancellationReason: r.cancellation_reason || null } }
 function toNotif(r)   { return { id: r.id, type: r.type, title: r.title, message: r.message, instructorId: r.instructor_id, readAt: r.read_at, createdAt: r.created_at } }
 
 
@@ -125,6 +125,9 @@ export function AppProvider({ children }) {
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'claims' }, ({ new: r }) => {
         setClaims(prev => { if (prev.find(c => c.id === r.id)) return prev; return [...prev, toClaim(r)] })
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'claims' }, ({ new: r }) => {
+        setClaims(prev => prev.map(c => c.id === r.id ? toClaim(r) : c))
       })
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'claims' }, ({ old: r }) => {
         setClaims(prev => prev.filter(c => c.id !== r.id))
@@ -236,6 +239,30 @@ export function AppProvider({ children }) {
     }
   }, [])
 
+  const cancelClaim = useCallback(async (claimId, cancelledBy, reason = null) => {
+    const now = new Date().toISOString()
+    // Optimistic: mark cancelled immediately so slot reopens in UI
+    setClaims(prev => prev.map(c => c.id === claimId
+      ? { ...c, status: 'cancelled', cancelledAt: now, cancelledBy }
+      : c
+    ))
+    const { data, error } = await supabase.rpc('cancel_claim', {
+      p_claim_id:     claimId,
+      p_cancelled_by: cancelledBy,
+      p_reason:       reason,
+    })
+    if (error || data?.error) {
+      console.error('cancelClaim failed:', error || data?.error)
+      // Rollback optimistic update
+      setClaims(prev => prev.map(c => c.id === claimId
+        ? { ...c, status: 'confirmed', cancelledAt: null, cancelledBy: null }
+        : c
+      ))
+      return { error: error?.message || data?.error || 'Cancellation failed' }
+    }
+    return { error: null }
+  }, [])
+
   // ── Instructors ───────────────────────────────────────────────────────────────
   const addInstructor = useCallback(async (inst) => {
     const { data, error } = await supabase.from('instructors')
@@ -298,7 +325,7 @@ export function AppProvider({ children }) {
       addModule, updateModule, deleteModule,
       addCourse, updateCourse, deleteCourse,
       addCohort, deleteCohort,
-      addClaim, removeClaim,
+      addClaim, removeClaim, cancelClaim,
       addInstructor, updateInstructor, deleteInstructor,
       pushNotification, markNotificationRead, markAllNotificationsRead,
       resetAll,

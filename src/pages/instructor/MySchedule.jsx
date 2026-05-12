@@ -7,12 +7,23 @@ import BottomSheet from '../../components/BottomSheet'
 import SlotCard from '../../components/SlotCard'
 import InstructorNameChip from '../../components/InstructorNameChip'
 
+function isCancellable(slot) {
+  if (!slot?.date) return false
+  const timeStr = slot.startTime || '09:00'
+  const courseDateTime = new Date(`${slot.date}T${timeStr.length === 5 ? timeStr : '09:00'}:00Z`)
+  const deadline = new Date(courseDateTime.getTime() - 72 * 60 * 60 * 1000)
+  return new Date() < deadline
+}
+
 export default function MySchedule() {
   const navigate = useNavigate()
-  const { removeClaim, currentInstructor, signOut } = useApp()
+  const { removeClaim, cancelClaim, currentInstructor, signOut } = useApp()
   const name = currentInstructor?.name || ''
   const slots = useSlots()
-  const [pendingUnclaim, setPendingUnclaim] = useState(null)
+  const [pendingUnclaim, setPendingUnclaim]   = useState(null)
+  const [cancelling,     setCancelling]       = useState(false)
+  const [sheetError,     setSheetError]       = useState(null)
+  const [toast,          setToast]            = useState(null)
 
   const mySlots = slots.filter(s => s.claim?.instructorName === name)
   const uniqueCourses = new Set(mySlots.map(s => s.courseId)).size
@@ -34,6 +45,26 @@ export default function MySchedule() {
   function isWithinUnclaimWindow(slot) {
     const claimedAt = slot?.claim?.claimedAt
     return claimedAt && (Date.now() - new Date(claimedAt).getTime()) < 30000
+  }
+
+  async function handleCancel() {
+    if (!pendingUnclaim?.claim) return
+    setCancelling(true)
+    setSheetError(null)
+    const { error } = await cancelClaim(pendingUnclaim.claim.id, name)
+    setCancelling(false)
+    if (error) {
+      setSheetError(error)
+    } else {
+      setPendingUnclaim(null)
+      setToast('Booking cancelled. The slot is now available for other instructors.')
+      setTimeout(() => setToast(null), 4000)
+    }
+  }
+
+  function closeSheet() {
+    setPendingUnclaim(null)
+    setSheetError(null)
   }
 
   return (
@@ -127,14 +158,17 @@ export default function MySchedule() {
         </div>
       </div>
 
-      {/* Unclaim confirmation */}
+      {/* Unclaim / Cancel confirmation sheet */}
       {pendingUnclaim && (() => {
         const withinWindow = isWithinUnclaimWindow(pendingUnclaim)
+        const cancellable  = !withinWindow && isCancellable(pendingUnclaim)
+        const blocked      = !withinWindow && !cancellable
+
         return (
           <BottomSheet
             isOpen
-            onClose={() => setPendingUnclaim(null)}
-            title={withinWindow ? 'Remove this slot?' : 'Cannot undo claim'}
+            onClose={closeSheet}
+            title={withinWindow ? 'Remove this slot?' : cancellable ? 'Cancel booking?' : 'Cannot cancel'}
           >
             {withinWindow ? (
               <div>
@@ -145,15 +179,47 @@ export default function MySchedule() {
                 </div>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button className="btn btn-danger" style={{ flex: 1 }} onClick={unclaimWithinWindow}>Remove</button>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setPendingUnclaim(null)}>Keep It</button>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeSheet}>Keep It</button>
+                </div>
+              </div>
+            ) : cancellable ? (
+              <div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
+                  <span style={{ fontFamily: 'Space Grotesk', fontWeight: 600, color: 'var(--text-1)' }}>
+                    {pendingUnclaim.course?.name} — Module {pendingUnclaim.day}
+                  </span><br />
+                  {formatDate(pendingUnclaim.date)} · Section {pendingUnclaim.section}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.5 }}>
+                  This booking will be cancelled and the slot will become available for other instructors.
+                </div>
+                {sheetError && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, padding: '12px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>{sheetError}</div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    className="btn btn-danger"
+                    style={{ flex: 1, opacity: cancelling ? 0.6 : 1 }}
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? 'Cancelling…' : 'Cancel Booking'}
+                  </button>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={closeSheet} disabled={cancelling}>
+                    Keep It
+                  </button>
                 </div>
               </div>
             ) : (
+              /* blocked — within 72-hour window */
               <div>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, padding: '12px 14px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <div style={{ fontSize: 13, color: 'var(--red)', lineHeight: 1.5 }}>
-                    The 30-second cancellation window has passed.
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 16, padding: '12px 14px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 'var(--radius-sm)' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 1 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div style={{ fontSize: 13, color: 'var(--amber)', lineHeight: 1.5 }}>
+                    Bookings can only be cancelled at least 72 hours before the scheduled course.
                   </div>
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6, lineHeight: 1.6 }}>
@@ -163,14 +229,32 @@ export default function MySchedule() {
                   {formatDate(pendingUnclaim.date)} · Section {pendingUnclaim.section}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-3)', marginBottom: 20, lineHeight: 1.6 }}>
-                  To cancel this booking, please email the program coordinator to request removal.
+                  The course is within the 72-hour window. Please contact the program coordinator if you need urgent assistance.
                 </div>
-                <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setPendingUnclaim(null)}>Got it</button>
+                <button className="btn btn-secondary" style={{ width: '100%' }} onClick={closeSheet}>Got it</button>
               </div>
             )}
           </BottomSheet>
         )
       })()}
+
+      {/* Success toast */}
+      {toast && (
+        <div
+          className="anim-fade"
+          style={{
+            position: 'fixed', bottom: 'max(88px, calc(72px + env(safe-area-inset-bottom)))',
+            left: 16, right: 16, zIndex: 60,
+            background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
+            borderRadius: 'var(--radius-md)', padding: '12px 16px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            backdropFilter: 'blur(12px)',
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+          <span style={{ fontSize: 13, color: 'var(--green)', lineHeight: 1.4 }}>{toast}</span>
+        </div>
+      )}
 
     </div>
   )
